@@ -4,7 +4,7 @@ Version: 0.0.0.1000
 Authors@R: 
     person("Cory", "Shain", , "cory.shain@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "https://orcid.org/0000-0002-2704-7197"))
-Description: A suite of utility functions to support continuous-time
+Description: An `R` suite of utility functions to support continuous-time
     deconvolutional regression (CDR) of nonlinear impulse response
     functions (IRFs), based on generalized additive models (GAMs) as
     implemented by Simon Woods' `mgcv` package. No modifications are made

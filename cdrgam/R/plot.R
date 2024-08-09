@@ -315,7 +315,7 @@ plot_lines <- function(
     for (line in data_2d) {
         X_ <- data.frame(
           x=line$x,
-          y=line$resp,
+          y=line$resp
         )
         if (!(is.null(line$resp.se))) {
             include_ci <- TRUE
@@ -335,15 +335,15 @@ plot_lines <- function(
         X$color <- factor(X$color, levels=color_levels)
     }
 
-    p <- ggplot2::ggplot(X, aes(x=x, y=y, lq=lq, uq=uq, color=color)) + ggplot2::theme_classic()
+    p <- ggplot2::ggplot(X, ggplot2::aes(x=x, y=y, lq=lq, uq=uq, color=color)) + ggplot2::theme_classic()
     if (add_origin) {
         p <- p + ggplot2::geom_vline(xintercept=0, color='black')
         p <- p + ggplot2::geom_hline(yintercept=0, color='black')
     }
     p <- p + ggplot2::geom_line()
     if (include_ci) {
-        p <- p + ggplot2::geom_line(aes(x=x, y=lq), linetype='dashed')
-        p <- p + ggplot2::geom_line(aes(x=x, y=uq), linetype='dashed')
+        p <- p + ggplot2::geom_line(ggplot2::aes(x=x, y=lq), linetype='dashed')
+        p <- p + ggplot2::geom_line(ggplot2::aes(x=x, y=uq), linetype='dashed')
     }
 
     p <- p + ggplot2::theme(legend.title=ggplot2::element_blank())
