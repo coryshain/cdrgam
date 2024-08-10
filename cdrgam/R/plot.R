@@ -456,7 +456,7 @@ get_irf_metadata <- function(
                 irf_name='Rate',
                 term_name='t_delta',
                 smooth_name=smooth_name,
-                ref=means,
+                X_ref=means,
                 xlim=xlim
             )
             irfs <- c(irfs, list(irf))
@@ -475,14 +475,14 @@ get_irf_metadata <- function(
                 } else {
                     delta <- 1
                 }
-                ref <- means
-                ref[[term_name]] <- ref[[term_name]] + delta
+                X_ref <- means
+                X_ref[[term_name]] <- X_ref[[term_name]] + delta
 
                 irf <- list(
                     irf_name=irf_name,
                     term_name=term_name,
                     smooth_name=smooth_name,
-                    ref=ref,
+                    X_ref=X_ref,
                     xlim=xlim
                 )
                 irfs <- c(irfs, list(irf))
@@ -549,7 +549,7 @@ plot_irfs <- function(
             model,
             smooth_name=irf$smooth_name,
             xvar='t_delta',
-            X_ref=irf$ref,
+            X_ref=irf$X_ref,
             xlim=irf$xlim
         )
         plot_data['name'] <- irf$irf_name
@@ -645,7 +645,7 @@ plot_curvature <- function(
             model,
             smooth_name=irf$smooth_name,
             xvar=term_name,
-            X_ref=irf$ref,
+            X_ref=irf$X_ref,
             xlim=irf$xlim
         )
         plot_data['name'] <- irf$irf_name
