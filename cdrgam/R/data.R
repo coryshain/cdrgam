@@ -271,16 +271,16 @@ get_cdr_data <- function(
             }
             if (is.null(ranef_levels)) {
                 ranef <- as.factor(ranef)
-                if (cdr_population_code() %in% levels(ranef)) {
-                    stop(paste0('Reserved keyword ', cdr_population_code(),
+                if (get_cdr_population_code() %in% levels(ranef)) {
+                    stop(paste0('Reserved keyword ', get_cdr_population_code(),
                                 ' found as a level of random effect ', ranef_name, '. Please rename.'))
                 }
             } else {
                 ranef <- factor(ranef, levels=ranef_levels)
             }
             dim(ranef) <- c(n, w)
-            if (!(cdr_population_code() %in% levels(ranef))) {
-                levels(ranef) <- c(levels(ranef), cdr_population_code())
+            if (!(get_cdr_population_code() %in% levels(ranef))) {
+                levels(ranef) <- c(levels(ranef), get_cdr_population_code())
             }
             out[[ranef_name]] <- ranef
         }

@@ -107,8 +107,8 @@ get_plot_data <- function(
         var.summary <- model$var.summary[[term_name]]
         if (!(term_name %in% names(X_ref))) {
             if (is.factor(var.summary)) {
-                if (cdr_population_code() %in% levels(var.summary)) {  # Random grouping factor
-                    X_ref[[term_name]] <- cdr_population_code()
+                if (get_cdr_population_code() %in% levels(var.summary)) {  # Random grouping factor
+                    X_ref[[term_name]] <- get_cdr_population_code()
                 } else {  # Other factor
                     X_ref[[term_name]] <- levels(var.summary)[1]
                 }
@@ -429,7 +429,7 @@ get_irf_metadata <- function(
     factors <- term_labels[term_dtypes == 'factor']
     gf <- character()
     for (factor in factors) {
-        if (cdr_population_code() %in% levels(model$var.summary[[factor]])) {
+        if (get_cdr_population_code() %in% levels(model$var.summary[[factor]])) {
             gf <- c(gf, factor)
         }
     }

@@ -17,3 +17,42 @@ functions to organize data, define models, visualize estimates, and
 perform statistical model comparison. These functions reduce the
 likelihood of user error and simplify the process of spinning up new
 CDR-GAM analyses from scratch.
+
+## Installation
+
+This package is not yet available on CRAN, but you can install the latest
+development version from GitHub with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("coryshain/cdrgam")
+```
+
+Once installed, load it you would any other R package:
+
+``` r
+library(cdrgam)
+```
+
+## Usage
+
+Examples and quickstart are forthcoming. For now, please see the
+package documentation. You can list all available functions in
+an interactive `R` session with:
+
+``` r
+library(cdrgam)
+ls("package:cdrgam")
+```
+
+And you can access the documentation for any function with:
+
+``` r
+?function_name
+```
+
+To build the full package manual as a pdf, use:
+
+``` r
+devtools::build_manual("cdrgam")
+```

@@ -6,6 +6,6 @@
 #'
 #' @returns A string
 #' @export
-cdr_population_code <- function() {
+get_cdr_population_code <- function() {
     return('!!!POPULATION!!!')
 }
