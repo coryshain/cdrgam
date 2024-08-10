@@ -103,9 +103,7 @@ get_formula_string <- function(
     }
     random_intercept <- expand_arg(random_intercept, ran_gfs, 'random_intercept', type='logical')
     random_rate <- expand_arg(random_rate, ran_gfs, 'random_rate', type='logical')
-    print(random_irf)
     random_irf <- expand_arg(random_irf, ran_gfs, 'random_irf', type='logical')
-    print(random_irf)
 
     # Helper function to simplify per-predictor code
     get_pred_formula <- function(
