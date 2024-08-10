@@ -307,7 +307,8 @@ plot_lines <- function(
         legend=TRUE,
         add_origin=TRUE
 ) {
-    X <- data.frame()
+    X <- data.frame(matrix(ncol=5, nrow=0))
+    colnames(X) <- c('x', 'y', 'lq', 'uq', 'color')
     n_colors <- length(data_2d)
     palette <- rainbow(n_colors)
 
