@@ -358,6 +358,7 @@ get_cdr_data <- function(
 #'   Each other variable should be a matrix of the same dimensionality as
 #'   'mask'. This list is typically the output of `get_cdr_data()`.
 #' @return A list containing the means of each numeric predictor in `x`.
+#' @export
 get_cdr_means <- function(x) {
     out <- list()
     sel <- !x[['mask']]
@@ -386,6 +387,7 @@ get_cdr_means <- function(x) {
 #'   Each other variable should be a matrix of the same dimensionality as
 #'   'mask'. This list is typically the output of `get_cdr_data()`.
 #' @return A list containing the SDs of each numeric predictor in `x`.
+#' @export
 get_cdr_sds <- function(x) {
     out <- list()
     sel <- !x[['mask']]
@@ -416,6 +418,7 @@ get_cdr_sds <- function(x) {
 #' @param n An integer specifying the number of quantiles to compute.
 #' @return A list containing the quantile vectors of each numeric predictor
 #'   in `x`.
+#' @export
 get_cdr_quantiles <- function(x, n=101) {
     out <- list()
     sel <- !x[['mask']]
