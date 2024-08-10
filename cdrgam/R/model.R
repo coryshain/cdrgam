@@ -41,60 +41,71 @@
 #' @param random_rate A logical, whether to include random rate (deconvolutional
 #'   intercept) terms for the random grouping factors. Ignored if `ran_gfs` is
 #'   NULL.
-#' @param random_IRFs A logical, whether to include random IRF terms for the
+#' @param random_irf A logical, whether to include random IRF terms for the
 #'   random grouping factors. Ignored if `ran_gfs` is NULL.
 #' @return A string representing the RHS of the model formula
 #' @export
 get_formula_string <- function(
-        preds,
+  preds,
+  k=5,
+  k_t=10,
+  bs='cr',
+  bs_t='cr',
+  ran_gfs=NULL,
+  random_intercept=TRUE,
+  random_rate=TRUE,
+  random_irf=TRUE
+) {
+    defaults <- list(
         k=5,
         k_t=10,
         bs='cr',
         bs_t='cr',
-        ran_gfs=NULL,
         random_intercept=TRUE,
         random_rate=TRUE,
-        random_IRFs=TRUE
-) {
-    if (is.numeric(k)) {
-        k_ <- list()
+        random_irf=TRUE
+    )
+
+    # Expand function arguments as needed into lists with full coverage of relevant input values
+    expand_arg <- function(x, preds, argname, type='numeric', add_t_delta=FALSE) {
+        if (is(x, type)) { # Single value of the correct type
+            default <- x
+            x <- list()
+        } else { # By assumption, named list of values
+            default <- defaults[[argname]]
+        }
+        if (is.null(preds)) { # No predictors to expand to
+            preds <- list()
+        }
+        x_ <- list()
         for (pred in preds) {
-            for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
-                k_[[pred_]] <- k
+            for (pred_ in pred) {  # Allows nesting
+                if (pred_ %in% names(x)) {  # If a specific value is provided, use it
+                    x_[[pred_]] <- x[[pred_]]
+                } else {  # Otherwise, use the default
+                    x_[[pred_]] <- default
+                }
             }
         }
-        k <- k_
-    }
-    if (is.numeric(k_t)) {
-        k_t_ <- list()
-        for (pred in c('t_delta', preds)) {
-            for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
-                k_t_[[pred_]] <- k_t
-            }
+        if (add_t_delta && !('t_delta' %in% names(x_))) {  # Add a value for t_delta if required
+            x_[['t_delta']] <- default
         }
-        k_t <- k_t_
+        x <- x_
+        return(x)
     }
-    if (is.character(bs)) {
-        bs_ <- list()
-        for (pred in preds) {
-            for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
-                bs_[[pred_]] <- bs
-            }
-        }
-        bs <- bs_
-    }
-    if (is.character(bs_t)) {
-        bs_t_ <- list()
-        for (pred in c('t_delta', preds)) {
-            for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
-                bs_t_[[pred_]] <- bs_t
-            }
-        }
-        bs_t <- bs_t_
-    }
+
+    k <- expand_arg(k, preds, 'k', type='numeric')
+    k_t <- expand_arg(k_t, preds, 'k_t', type='numeric', add_t_delta=TRUE)
+    bs <- expand_arg(bs, preds, 'bs', type='character')
+    bs_t <- expand_arg(bs_t, preds, 'bs_t', type='character', add_t_delta=TRUE)
     if (is.null(ran_gfs)) {
         ran_gfs <- character()
     }
+    random_intercept <- expand_arg(random_intercept, ran_gfs, 'random_intercept', type='logical')
+    random_rate <- expand_arg(random_rate, ran_gfs, 'random_rate', type='logical')
+    print(random_irf)
+    random_irf <- expand_arg(random_irf, ran_gfs, 'random_irf', type='logical')
+    print(random_irf)
 
     # Helper function to simplify per-predictor code
     get_pred_formula <- function(
@@ -107,8 +118,8 @@ get_formula_string <- function(
     ) {
         smooth_in <- 't_delta'
         linear_in <- character()
-        bs_arg <- paste0('"', bs_t[[pred_]], '"')
-        k_arg <- as.character(k_t[[pred_]])
+        bs_arg <- paste0('"', bs_t[['t_delta']], '"')
+        k_arg <- as.character(k_t[['t_delta']])
         for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
             if (!is.null(bs[[pred_]])) {
                 smooth_in <- c(smooth_in, paste0('I(', pred_, ')'))
@@ -137,13 +148,13 @@ get_formula_string <- function(
         f <- paste0(f, pred_f)
     }
     for (ran_gf in ran_gfs) {
-        if (random_intercept) {
+        if (random_intercept[[ran_gf]]) {
             f <- paste0(f, ' + te(', ran_gf, ', bs="re", by=mask)')
         }
-        if (random_rate) {
+        if (random_rate[[ran_gf]]) {
             f <- paste0(f, ' + te(t_delta, ', ran_gf, ', bs=c("', bs_t[['t_delta']], '", "re"), by=mask)')
         }
-        if (random_IRFs) {
+        if (random_irf[[ran_gf]]) {
             for (pred in preds) {
                 pred_f <- get_pred_formula(pred, k, k_t, bs, bs_t, ran_gf=ran_gf)
                 f <- paste0(f, pred_f)

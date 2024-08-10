@@ -13,7 +13,7 @@ get_formula_string(
   ran_gfs = NULL,
   random_intercept = TRUE,
   random_rate = TRUE,
-  random_IRFs = TRUE
+  random_irf = TRUE
 )
 }
 \arguments{
@@ -54,7 +54,7 @@ for the random grouping factors. Ignored if \code{ran_gfs} is NULL.}
 intercept) terms for the random grouping factors. Ignored if \code{ran_gfs} is
 NULL.}
 
-\item{random_IRFs}{A logical, whether to include random IRF terms for the
+\item{random_irf}{A logical, whether to include random IRF terms for the
 random grouping factors. Ignored if \code{ran_gfs} is NULL.}
 }
 \value{
