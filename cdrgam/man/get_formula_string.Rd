@@ -17,7 +17,14 @@ get_formula_string(
 )
 }
 \arguments{
-\item{preds}{A character vector of predictor names}
+\item{preds}{A character vector of predictor names, or a list of character
+vectors of predictor names. If a list, each element of the list--i.e.,
+each (possibly singleton) set of predictors--defines a separate smooth
+that will be added to the model. A smooth involving multiple predictors
+will represent an IRF of the interaction of all predictors in the set.
+For example, \code{c('a', 'b')} will create independent IRFs for \code{a} and \code{b},
+whereas \code{list('a', 'b', c('a', 'b'))} will additionally create an IRF
+of the interaction of \code{a} and \code{b}.}
 
 \item{k}{A numeric or list of numerics, the degree of the IRF splines for
 each predictor. If a single numeric, the same value is used for all
@@ -55,14 +62,14 @@ A string representing the RHS of the model formula
 }
 \description{
 Compute a string representation of the right-hand side (RHS) of a standard
-CDR-GAM formula from a set of preditors and optional parameters. The
-model will contain a "rate" term (deconvolutional intercepts), additive
-impulse response functions (IRFs) for each predictor individually, and
+CDR-GAM formula from a set of preditors (or predictor sets in the case of
+interactions) and optional parameters. The model will contain a "rate"
+term (deconvolutional intercepts), additive impulse response functions
+(IRFs) for each predictor set individually, and corresponding
 intercept, rate, and IRF terms for each random grouping factor, if
 applicable. Model formulas can of course be written by the modeler,
 so this is simply a convenience function for typical cases, which
-guarantees that the resulting model is a valid CDR-GAM. More complex
-terms (e.g., terms involving IRFs of predictor interactions) currently
-must be added to the output by hand using string concatenation
-(\code{paste()} function).
+guarantees that the resulting model is a valid CDR-GAM. However, since
+the function returns a string, the output can be edited as needed by
+the modeler in special cases.
 }
