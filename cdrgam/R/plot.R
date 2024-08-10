@@ -437,7 +437,7 @@ get_irf_metadata <- function(
     irfs <- list()
     for (smooth in model$smooth) {
         smooth_name <- smooth$label
-        response_param_ix <- as.integer(gsub('[a-zA-Z]+(\\.(\\d*))?\\(.+', '\\2', s1))
+        response_param_ix <- as.integer(gsub('[a-zA-Z]+(\\.(\\d*))?\\(.+', '\\2', smooth_name))
         if (is.null(response_param_ix)) {
             response_param_ix <- 0
         }
