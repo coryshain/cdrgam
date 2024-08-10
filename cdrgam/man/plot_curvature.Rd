@@ -6,8 +6,9 @@
 \usage{
 plot_curvature(
   model,
-  means,
-  sds,
+  response_param = 1,
+  means = NULL,
+  sds = NULL,
   quantiles = NULL,
   range = 1,
   xlim = NULL,
@@ -23,11 +24,19 @@ plot_curvature(
 \item{model}{A CDR-GAM object (i.e., an \code{mgcv} model fitted with a CDR-GAM
 model structure on CDR-GAM-structured data).}
 
+\item{response_param}{An integer specifying the index of the response
+parameter to use for the IRF. E.g., if the response is Gaussian,
+\code{response_param=1} refers to the mean parameter, while \code{response_param=2}
+refers to the standard deviation parameter.}
+
 \item{means}{A list of means for each variable in the model. This is
-typically the output of \code{get_cdr_means()}.}
+typically the output of \code{get_cdr_means()}. If NULL, the function will
+default to 0 for all numeric variables and the first level for all
+factor variables.}
 
 \item{sds}{A list of standard deviations for each variable in the model.
-This is typically the output of \code{get_cdr_sds()}.}
+This is typically the output of \code{get_cdr_sds()}. If NULL, the function
+will default to 1.}
 
 \item{quantiles}{A list of quantiles for each variable in the model. This is
 typically the output of \code{get_cdr_quantiles()}.}

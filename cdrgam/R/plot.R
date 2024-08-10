@@ -369,10 +369,17 @@ plot_lines <- function(
 #'
 #' @param model A CDR-GAM object (i.e., an `mgcv` model fitted with a CDR-GAM
 #'   model structure on CDR-GAM-structured data).
+#' @param response_param An integer specifying the index of the response
+#'   parameter to use for the IRF. E.g., if the response is Gaussian,
+#'   `response_param=1` refers to the mean parameter, while `response_param=2`
+#'   refers to the standard deviation parameter.
 #' @param means A list of means for each variable in the model. This is
-#'   typically the output of `get_cdr_means()`.
+#'   typically the output of `get_cdr_means()`. If NULL, the function will
+#'   default to 0 for all numeric variables and the first level for all
+#'   factor variables.
 #' @param sds A list of standard deviations for each variable in the model.
-#'   This is typically the output of `get_cdr_sds()`.
+#'   This is typically the output of `get_cdr_sds()`. If NULL, the function
+#'   will default to 1.
 #' @param xlim A numeric vector of length 2 specifying the minimum and maximum
 #'   values for the x-axis. If NULL, the function will default to 0 and 1.
 #' @param irf_name_map A list of mappings from IRF names to human-readable
@@ -391,13 +398,17 @@ plot_lines <- function(
 #' @export
 get_irf_metadata <- function(
         model,
-        means,
-        sds,
+        response_param=1,
+        means=NULL,
+        sds=NULL,
         xlim=c(0, 1),
         irf_name_map=NULL,
         add_rate=TRUE,
         exclude=c('t_delta', 'mask')
 ) {
+    if (is.null(sds)) {
+        sds <- list()
+    }
     if (is.null(irf_name_map)) {
         irf_name_map <- list()
     }
@@ -426,6 +437,14 @@ get_irf_metadata <- function(
     irfs <- list()
     for (smooth in model$smooth) {
         smooth_name <- smooth$label
+        response_param_ix <- as.integer(gsub('[a-zA-Z]+(\\.(\\d*))?\\(.+', '\\2', s1))
+        if (is.null(response_param_ix)) {
+            response_param_ix <- 0
+        }
+        response_param_ix <- response_param_ix + 1
+        if (response_param_ix != response_param) {
+            next
+        }
         sel <- !(smooth$term %in% exclude)
         term_names <- smooth$term
         if (sum(term_names %in% gf) > 0) { # Skip random effects
@@ -480,10 +499,17 @@ get_irf_metadata <- function(
 #'
 #' @param model A CDR-GAM object (i.e., an `mgcv` model fitted with a CDR-GAM
 #'   model structure on CDR-GAM-structured data).
+#' @param response_param An integer specifying the index of the response
+#'   parameter to use for the IRF. E.g., if the response is Gaussian,
+#'   `response_param=1` refers to the mean parameter, while `response_param=2`
+#'   refers to the standard deviation parameter.
 #' @param means A list of means for each variable in the model. This is
-#'   typically the output of `get_cdr_means()`.
+#'   typically the output of `get_cdr_means()`. If NULL, the function will
+#'   default to 0 for all numeric variables and the first level for all
+#'   factor variables.
 #' @param sds A list of standard deviations for each variable in the model.
-#'   This is typically the output of `get_cdr_sds()`.
+#'   This is typically the output of `get_cdr_sds()`. If NULL, the function
+#'   will default to 1.
 #' @param xlim A numeric vector of length 2 specifying the minimum and maximum
 #'   values for the x-axis. If NULL, the function will default to 0 and 1.
 #' @param irf_name_map A list of mappings from IRF names to human-readable
@@ -497,8 +523,9 @@ get_irf_metadata <- function(
 #' @export
 plot_irfs <- function(
         model,
-        means,
-        sds,
+        response_param=1,
+        means=NULL,
+        sds=NULL,
         xlim=c(0, 1),
         irf_name_map=NULL,
         xlabel='Delay (s)',
@@ -508,8 +535,9 @@ plot_irfs <- function(
 ) {
     irfs <- get_irf_metadata(
         model,
-        means,
-        sds,
+        response_param=response_param,
+        means=means,
+        sds=sds,
         xlim=xlim,
         irf_name_map=irf_name_map,
         exclude=exclude
@@ -544,10 +572,17 @@ plot_irfs <- function(
 #'
 #' @param model A CDR-GAM object (i.e., an `mgcv` model fitted with a CDR-GAM
 #'   model structure on CDR-GAM-structured data).
+#' @param response_param An integer specifying the index of the response
+#'   parameter to use for the IRF. E.g., if the response is Gaussian,
+#'   `response_param=1` refers to the mean parameter, while `response_param=2`
+#'   refers to the standard deviation parameter.
 #' @param means A list of means for each variable in the model. This is
-#'   typically the output of `get_cdr_means()`.
+#'   typically the output of `get_cdr_means()`. If NULL, the function will
+#'   default to 0 for all numeric variables and the first level for all
+#'   factor variables.
 #' @param sds A list of standard deviations for each variable in the model.
-#'   This is typically the output of `get_cdr_sds()`.
+#'   This is typically the output of `get_cdr_sds()`. If NULL, the function
+#'   will default to 1.
 #' @param quantiles A list of quantiles for each variable in the model. This is
 #'   typically the output of `get_cdr_quantiles()`.
 #' @param range A numeric value specifying the range of quantiles to use for
@@ -569,8 +604,9 @@ plot_irfs <- function(
 #' @export
 plot_curvature <- function(
         model,
-        means,
-        sds,
+        response_param=1,
+        means=NULL,
+        sds=NULL,
         quantiles=NULL,
         range=1,
         xlim=NULL,
@@ -584,8 +620,9 @@ plot_curvature <- function(
 
     irfs <- get_irf_metadata(
         model,
-        means,
-        sds,
+        response_param=response_param,
+        means=means,
+        sds=sds,
         irf_name_map=irf_name_map,
         exclude=exclude,
         add_rate=FALSE
