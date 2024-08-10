@@ -1,18 +1,25 @@
 #' Compute a standard CDR-GAM formula string
 #'
 #' Compute a string representation of the right-hand side (RHS) of a standard
-#' CDR-GAM formula from a set of preditors and optional parameters. The
-#' model will contain a "rate" term (deconvolutional intercepts), additive
-#' impulse response functions (IRFs) for each predictor individually, and
+#' CDR-GAM formula from a set of preditors (or predictor sets in the case of
+#' interactions) and optional parameters. The model will contain a "rate"
+#' term (deconvolutional intercepts), additive impulse response functions
+#' (IRFs) for each predictor set individually, and corresponding
 #' intercept, rate, and IRF terms for each random grouping factor, if
 #' applicable. Model formulas can of course be written by the modeler,
 #' so this is simply a convenience function for typical cases, which
-#' guarantees that the resulting model is a valid CDR-GAM. More complex
-#' terms (e.g., terms involving IRFs of predictor interactions) currently
-#' must be added to the output by hand using string concatenation
-#' (`paste()` function).
+#' guarantees that the resulting model is a valid CDR-GAM. However, since
+#' the function returns a string, the output can be edited as needed by
+#' the modeler in special cases.
 #'
-#' @param preds A character vector of predictor names
+#' @param preds A character vector of predictor names, or a list of character
+#'   vectors of predictor names. If a list, each element of the list--i.e.,
+#'   each (possibly singleton) set of predictors--defines a separate smooth
+#'   that will be added to the model. A smooth involving multiple predictors
+#'   will represent an IRF of the interaction of all predictors in the set.
+#'   For example, `c('a', 'b')` will create independent IRFs for `a` and `b`,
+#'   whereas `list('a', 'b', c('a', 'b'))` will additionally create an IRF
+#'   of the interaction of `a` and `b`.
 #' @param k A numeric or list of numerics, the degree of the IRF splines for
 #'   each predictor. If a single numeric, the same value is used for all
 #'   predictors.
@@ -52,43 +59,82 @@ get_formula_string <- function(
     if (is.numeric(k)) {
         k_ <- list()
         for (pred in preds) {
-            k_[[pred]] <- k
+            for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
+                k_[[pred_]] <- k
+            }
         }
         k <- k_
     }
     if (is.numeric(k_t)) {
         k_t_ <- list()
         for (pred in c('t_delta', preds)) {
-            k_t_[[pred]] <- k_t
+            for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
+                k_t_[[pred_]] <- k_t
+            }
         }
         k_t <- k_t_
     }
     if (is.character(bs)) {
         bs_ <- list()
         for (pred in preds) {
-            bs_[[pred]] <- bs
+            for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
+                bs_[[pred_]] <- bs
+            }
         }
         bs <- bs_
     }
     if (is.character(bs_t)) {
         bs_t_ <- list()
         for (pred in c('t_delta', preds)) {
-            bs_t_[[pred]] <- bs_t
+            for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
+                bs_t_[[pred_]] <- bs_t
+            }
         }
         bs_t <- bs_t_
     }
     if (is.null(ran_gfs)) {
         ran_gfs <- character()
     }
+
+    # Helper function to simplify per-predictor code
+    get_pred_formula <- function(
+        pred,
+        k,
+        k_t,
+        bs,
+        bs_t,
+        ran_gf=NULL
+    ) {
+        smooth_in <- 't_delta'
+        linear_in <- character()
+        bs_arg <- paste0('"', bs_t[[pred_]], '"')
+        k_arg <- as.character(k_t[[pred_]])
+        for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
+            if (!is.null(bs[[pred_]])) {
+                smooth_in <- c(smooth_in, paste0('I(', pred_, ')'))
+                bs_arg <- c(bs_arg, paste0('"', bs_t[[pred_]], '"'))
+                k_arg <- c(k_arg, as.character(k[[pred_]]))
+            }
+            linear_in <- c(linear_in, pred_)
+        }
+        bs_arg <- c(bs_arg, rep('"re"', length(pred))) # Add re bases for linear terms
+        if (!(is.null(ran_gf))) {
+            # Add random grouping factor
+            linear_in <- c(linear_in, ran_gf)
+            bs_arg <- c(bs_arg, '"re"')
+        }
+        smooth_in <- paste(smooth_in, collapse=', ')
+        linear_in <- paste(linear_in, collapse=', ')
+        bs_arg <- paste(bs_arg, collapse=', ')
+        k_arg <- paste(k_arg, collapse=', ')
+        pred_f <- paste0(' + te(', smooth_in, ', ', linear_in, ', k=c(', k_arg, '), bs=c(', bs_arg, '), by=mask)')
+        return(pred_f)
+    }
+
     f <- paste0('~ te(t_delta, k=', k_t[['t_delta']], ', bs="', bs_t[['t_delta']], '", by=mask)')
     for (pred in preds) {
-        if (is.null(bs)) {
-            f <- paste0(f, ' + te(t_delta, ', pred, ', k=', k_t[[pred]],
-                           ', bs=c("', bs_t[[pred]], '", "re"), by=mask)')
-        } else {
-            f <- paste0(f, ' + te(t_delta, I(', pred, '), ', pred, ', k=c(', k_t[[pred]], ', ', k[[pred]],
-                           '), bs=c("', bs_t[[pred]], '", "', bs[[pred]], '", "re"), by=mask)')
-        }
+        pred_f <- get_pred_formula(pred, k, k_t, bs, bs_t)
+        f <- paste0(f, pred_f)
     }
     for (ran_gf in ran_gfs) {
         if (random_intercept) {
@@ -99,13 +145,8 @@ get_formula_string <- function(
         }
         if (random_IRFs) {
             for (pred in preds) {
-                if (is.null(bs)) {
-                    f <- paste0(f, ' + te(t_delta, ', pred, ', ', ran_gf,
-                                   ', bs=c("', bs_t[[pred]], '", "re", "re"), by=mask)')
-                } else {
-                    f <- paste0(f, ' + te(t_delta, I(', pred, '), ', pred, ', ', ran_gf,
-                                   ', bs=c("', bs_t[[pred]], '", "', bs[[pred]], '", "re", "re"), by=mask)')
-                }
+                pred_f <- get_pred_formula(pred, k, k_t, bs, bs_t, ran_gf=ran_gf)
+                f <- paste0(f, pred_f)
             }
         }
     }
