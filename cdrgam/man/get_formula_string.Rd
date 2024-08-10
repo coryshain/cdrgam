@@ -29,7 +29,8 @@ is used for all predictors.}
 
 \item{bs}{A character or list of characters, the basis function for the
 IRF splines for each predictor. If a single character, the same value is
-used for all IRFs. See \code{?mgcv::smooth.terms} for details.}
+used for all IRFs. See \code{?mgcv::smooth.terms} for details. If NULL,
+the IRF will be constrained to be linear in the predictor.}
 
 \item{bs_t}{A character or list of characters, the basis function for the
 IRF splines for the time delta variable of each IRF. If a single character,

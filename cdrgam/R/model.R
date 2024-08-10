@@ -21,7 +21,8 @@
 #'   is used for all predictors.
 #' @param bs A character or list of characters, the basis function for the
 #'   IRF splines for each predictor. If a single character, the same value is
-#'   used for all IRFs. See `?mgcv::smooth.terms` for details.
+#'   used for all IRFs. See `?mgcv::smooth.terms` for details. If NULL,
+#'   the IRF will be constrained to be linear in the predictor.
 #' @param bs_t A character or list of characters, the basis function for the
 #'   IRF splines for the time delta variable of each IRF. If a single character,
 #'   the same value is used for all IRFs. See `?mgcv::smooth.terms` for details.
@@ -81,8 +82,13 @@ get_formula_string <- function(
     }
     f <- paste0('~ te(t_delta, k=', k_t[['t_delta']], ', bs="', bs_t[['t_delta']], '", by=mask)')
     for (pred in preds) {
-        f <- paste0(f, ' + te(t_delta, I(', pred, '), ', pred, ', k=c(', k_t[[pred]], ', ', k[[pred]],
-                      '), bs=c("', bs_t[[pred]], '", "', bs[[pred]], '", "re"), by=mask)')
+        if (is.null(bs)) {
+            f <- paste0(f, ' + te(t_delta, ', pred, ', k=', k_t[[pred]],
+                           ', bs=c("', bs_t[[pred]], '", "re"), by=mask)')
+        } else {
+            f <- paste0(f, ' + te(t_delta, I(', pred, '), ', pred, ', k=c(', k_t[[pred]], ', ', k[[pred]],
+                           '), bs=c("', bs_t[[pred]], '", "', bs[[pred]], '", "re"), by=mask)')
+        }
     }
     for (ran_gf in ran_gfs) {
         if (random_intercept) {
@@ -93,8 +99,13 @@ get_formula_string <- function(
         }
         if (random_IRFs) {
             for (pred in preds) {
-                f <- paste0(f, ' + te(t_delta, I(', pred, '), ', pred, ', ', ran_gf,
-                             ', bs=c("', bs_t[[pred]], '", "', bs[[pred]], '", "re", "re"), by=mask)')
+                if (is.null(bs)) {
+                    f <- paste0(f, ' + te(t_delta, ', pred, ', ', ran_gf,
+                                   ', bs=c("', bs_t[[pred]], '", "re", "re"), by=mask)')
+                } else {
+                    f <- paste0(f, ' + te(t_delta, I(', pred, '), ', pred, ', ', ran_gf,
+                                   ', bs=c("', bs_t[[pred]], '", "', bs[[pred]], '", "re", "re"), by=mask)')
+                }
             }
         }
     }
