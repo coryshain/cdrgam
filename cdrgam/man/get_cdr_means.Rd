@@ -4,13 +4,16 @@
 \alias{get_cdr_means}
 \title{Get means of numeric columns in a CDR dataset}
 \usage{
-get_cdr_means(x)
+get_cdr_means(x, mask_col = "mask")
 }
 \arguments{
 \item{x}{A list containing matrix-valued variables, including a 'mask'
 variable indicating whether each observation is valid (1) or invalid (0).
 Each other variable should be a matrix of the same dimensionality as
 'mask'. This list is typically the output of \code{get_cdr_data()}.}
+
+\item{mask_col}{A string specifying the name assigned to the column
+containing the mask over valid timepoints.}
 }
 \value{
 A list containing the means of each numeric predictor in \code{x}.

@@ -1,3 +1,5 @@
+CDRGAM.POPULATION_CODE <- '!!!POPULATION!!!'
+
 #' Get the CDR-GAM population code
 #'
 #' Get the string code for the reserved value (representing the population
@@ -7,5 +9,5 @@
 #' @returns A string
 #' @export
 get_cdr_population_code <- function() {
-    return('!!!POPULATION!!!')
+    return(CDRGAM.POPULATION_CODE)
 }

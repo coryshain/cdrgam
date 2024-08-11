@@ -4,7 +4,7 @@
 \alias{get_cdr_quantiles}
 \title{Get vectors of quantiles for numeric columns in a CDR dataset}
 \usage{
-get_cdr_quantiles(x, n = 101)
+get_cdr_quantiles(x, n = 101, mask_col = "mask")
 }
 \arguments{
 \item{x}{A list containing matrix-valued variables, including a 'mask'
@@ -13,6 +13,9 @@ Each other variable should be a matrix of the same dimensionality as
 'mask'. This list is typically the output of \code{get_cdr_data()}.}
 
 \item{n}{An integer specifying the number of quantiles to compute.}
+
+\item{mask_col}{A string specifying the name assigned to the column
+containing the mask over valid timepoints.}
 }
 \value{
 A list containing the quantile vectors of each numeric predictor

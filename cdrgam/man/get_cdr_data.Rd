@@ -16,6 +16,8 @@ get_cdr_data(
   future_length = 0,
   t_delta_cutoff = NULL,
   time_col = "time",
+  t_delta_col = "t_delta",
+  mask_col = "mask",
   verbose = TRUE
 )
 }
@@ -60,6 +62,12 @@ row in \code{Y}. If NULL, no cutoff is applied.}
 \item{time_col}{A string specifying the column name in \code{X} and \code{Y} that
 contains timestamps.}
 
+\item{t_delta_col}{A string specifying the name to assign to the column
+containing the difference in time between impulses and response.}
+
+\item{mask_col}{A string specifying the name to assign to the column
+containing the mask over valid timepoints.}
+
 \item{verbose}{A logical indicating whether to print progress messages.}
 }
 \value{
@@ -69,10 +77,10 @@ windowed representations of each predictor in the input data, along with
 three special matrix-valued variables of the same dimensionality:
 \itemize{
 \item \code{time_col}: The timestamp of each observation in the window.
-\item 't_delta': The time difference between the timestamp of each
+\item \code{t_delta_col}: The time difference between the timestamp of each
 observation in the window and the timestamp of the corresponding
 row in \code{Y}.
-\item 'mask': A binary mask indicating whether each observation in the
+\item \code{mask_col}: A binary mask indicating whether each observation in the
 window is valid (1) or invalid (0). An observation is invalid if
 the time difference between the timestamp of the observation and
 the timestamp of the corresponding row in \code{Y} exceeds \code{t_delta_cutoff},

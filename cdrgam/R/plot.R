@@ -35,6 +35,8 @@
 #'   data into the matrix format expected by `plotly`'s 3D plotting
 #'   functions. If FALSE, all values will be returned as flattened vectors,
 #'   which can be used to e.g., construct heatmaps using `ggplot2`.
+#' @param mask_col A string specifying the name of the column
+#'   containing the mask over valid timepoints.
 #' @return A list containing the following elements:
 #'   - smooth_name: The name of the smooth term.
 #'   - xvar: The name of the variable manipulated along the x-axis.
@@ -57,7 +59,8 @@ get_plot_data <- function(
         yaxis=NULL,
         ylim=NULL,
         yres=NULL,
-        reshape_3d=FALSE
+        reshape_3d=FALSE,
+        mask_col='mask'
 ) {
     if (is.null(model)) {stop('Value must be provided for model')}
     if (is.null(smooth_name)) {stop('Value must be provided for smooth_name')}
@@ -112,7 +115,7 @@ get_plot_data <- function(
                 } else {  # Other factor
                     X_ref[[term_name]] <- levels(var.summary)[1]
                 }
-            } else if (term_name == 'mask') {  # Mask, unused for plotting
+            } else if (term_name == mask_col) {  # Mask, unused for plotting
                 X_ref[[term_name]] <- 1
             } else {  # Numeric
                 X_ref[[term_name]] <- 0
@@ -389,6 +392,8 @@ plot_lines <- function(
 #' @param add_rate A logical value indicating whether to add a rate term to the
 #'   IRF list. This is useful for models that include a rate term.
 #' @param exclude A character vector of term names to exclude from the IRF list.
+#' @param t_delta_col A string specifying the name of the column
+#'   containing the difference in time between impulses and response.
 #' @return A list of IRF metadata, each containing the following elements:
 #'   - irf_name: The name of the IRF
 #'   - term_name: The name of the term (predictor) in the model
@@ -405,7 +410,8 @@ get_irf_metadata <- function(
         xlim=c(0, 1),
         irf_name_map=NULL,
         add_rate=TRUE,
-        exclude=c('t_delta', 'mask')
+        exclude=c('t_delta', 'mask'),
+        t_delta_col='t_delta'
 ) {
     if (is.null(sds)) {
         sds <- list()
@@ -451,16 +457,16 @@ get_irf_metadata <- function(
         if (sum(term_names %in% gf) > 0) { # Skip random effects
             next
         }
-        if (add_rate && length(term_names) == 1 && term_names == 't_delta') {  # Rate term
+        if (add_rate && length(term_names) == 1 && term_names == t_delta_col) {  # Rate term
             irf <- list(
                 irf_name='Rate',
-                term_name='t_delta',
+                term_name=t_delta_col,
                 smooth_name=smooth_name,
                 X_ref=means,
                 xlim=xlim
             )
             irfs <- c(irfs, list(irf))
-        } else if ('t_delta' %in% term_names) {
+        } else if (t_delta_col %in% term_names) {
             term_names <- term_names[sel]
             for (term_name in term_names) {
                 irf_name <- paste0(term_name, ' | ', smooth_name)
@@ -520,6 +526,10 @@ get_irf_metadata <- function(
 #' @param ylabel A string specifying the y-axis label
 #' @param legend A logical value indicating whether to include a legend
 #' @param exclude A character vector of term names to exclude from the IRF list.
+#' @param t_delta_col A string specifying the name of the column
+#'   containing the difference in time between impulses and response.
+#' @param mask_col A string specifying the name of the column
+#'   containing the mask over valid timepoints.
 #' @return A ggplot2 object
 #' @export
 plot_irfs <- function(
@@ -532,7 +542,9 @@ plot_irfs <- function(
         xlabel='Delay (s)',
         ylabel='y',
         legend=TRUE,
-        exclude=c('t_delta', 'mask')
+        exclude=c('t_delta', 'mask'),
+        t_delta_col='t_delta',
+        mask_col='mask'
 ) {
     irfs <- get_irf_metadata(
         model,
@@ -541,16 +553,18 @@ plot_irfs <- function(
         sds=sds,
         xlim=xlim,
         irf_name_map=irf_name_map,
-        exclude=exclude
+        exclude=exclude,
+        t_delta_col=t_delta_col
     )
     data_2d <- list()
     for (irf in irfs) {
         plot_data <- get_plot_data(
             model,
             smooth_name=irf$smooth_name,
-            xvar='t_delta',
+            xvar=t_delta_col,
             X_ref=irf$X_ref,
-            xlim=irf$xlim
+            xlim=irf$xlim,
+            mask_col=mask_col
         )
         plot_data['name'] <- irf$irf_name
         data_2d <- c(data_2d, list(plot_data))
@@ -601,6 +615,10 @@ plot_irfs <- function(
 #' @param ylabel A string specifying the y-axis label
 #' @param legend A logical value indicating whether to include a legend
 #' @param exclude A character vector of term names to exclude from the IRF list.
+#' @param t_delta_col A string specifying the name of the column
+#'   containing the difference in time between impulses and response.
+#' @param mask_col A string specifying the name of the column
+#'   containing the mask over valid timepoints.
 #' @return A ggplot2 object
 #' @export
 plot_curvature <- function(
@@ -616,9 +634,10 @@ plot_curvature <- function(
         xlabel='Predictor',
         ylabel='y',
         legend=TRUE,
-        exclude=c('t_delta', 'mask')
+        exclude=c('t_delta', 'mask'),
+        t_delta_col='t_delta',
+        mask_col='mask'
 ) {
-
     irfs <- get_irf_metadata(
         model,
         response_param=response_param,
@@ -626,7 +645,8 @@ plot_curvature <- function(
         sds=sds,
         irf_name_map=irf_name_map,
         exclude=exclude,
-        add_rate=FALSE
+        add_rate=FALSE,
+        t_delta_col=t_delta_col
     )
     data_2d <- list()
     for (irf in irfs) {
@@ -646,7 +666,8 @@ plot_curvature <- function(
             smooth_name=irf$smooth_name,
             xvar=term_name,
             X_ref=irf$X_ref,
-            xlim=irf$xlim
+            xlim=irf$xlim,
+            mask_col=mask_col
         )
         plot_data['name'] <- irf$irf_name
         data_2d <- c(data_2d, list(plot_data))

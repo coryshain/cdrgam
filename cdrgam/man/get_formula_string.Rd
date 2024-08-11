@@ -13,7 +13,9 @@ get_formula_string(
   ran_gfs = NULL,
   random_intercept = TRUE,
   random_rate = TRUE,
-  random_irf = TRUE
+  random_irf = TRUE,
+  t_delta_col = "t_delta",
+  mask_col = "mask"
 )
 }
 \arguments{
@@ -56,6 +58,12 @@ NULL.}
 
 \item{random_irf}{A logical, whether to include random IRF terms for the
 random grouping factors. Ignored if \code{ran_gfs} is NULL.}
+
+\item{t_delta_col}{A string specifying the name of the column
+containing the difference in time between impulses and response.}
+
+\item{mask_col}{A string specifying the name of the column
+containing the mask over valid timepoints.}
 }
 \value{
 A string representing the RHS of the model formula

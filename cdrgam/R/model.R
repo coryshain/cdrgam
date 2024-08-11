@@ -43,18 +43,24 @@
 #'   NULL.
 #' @param random_irf A logical, whether to include random IRF terms for the
 #'   random grouping factors. Ignored if `ran_gfs` is NULL.
+#' @param t_delta_col A string specifying the name of the column
+#'   containing the difference in time between impulses and response.
+#' @param mask_col A string specifying the name of the column
+#'   containing the mask over valid timepoints.
 #' @return A string representing the RHS of the model formula
 #' @export
 get_formula_string <- function(
-  preds,
-  k=5,
-  k_t=10,
-  bs='cr',
-  bs_t='cr',
-  ran_gfs=NULL,
-  random_intercept=TRUE,
-  random_rate=TRUE,
-  random_irf=TRUE
+        preds,
+        k=5,
+        k_t=10,
+        bs='cr',
+        bs_t='cr',
+        ran_gfs=NULL,
+        random_intercept=TRUE,
+        random_rate=TRUE,
+        random_irf=TRUE,
+        t_delta_col='t_delta',
+        mask_col='mask'
 ) {
     defaults <- list(
         k=5,
@@ -68,7 +74,7 @@ get_formula_string <- function(
 
     # Expand function arguments as needed into lists with full coverage of relevant input values
     expand_arg <- function(x, preds, argname, type='numeric', add_t_delta=FALSE) {
-        if (is(x, type)) { # Single value of the correct type
+        if (is(x, type) | is.null(x)) { # Single value of the correct type
             default <- x
             x <- list()
         } else { # By assumption, named list of values
@@ -87,8 +93,8 @@ get_formula_string <- function(
                 }
             }
         }
-        if (add_t_delta && !('t_delta' %in% names(x_))) {  # Add a value for t_delta if required
-            x_[['t_delta']] <- default
+        if (add_t_delta && !(t_delta_col %in% names(x_))) {  # Add a value for t_delta if required
+            x_[[t_delta_col]] <- default
         }
         x <- x_
         return(x)
@@ -114,10 +120,10 @@ get_formula_string <- function(
         bs_t,
         ran_gf=NULL
     ) {
-        smooth_in <- 't_delta'
+        smooth_in <- t_delta_col
         linear_in <- character()
-        bs_arg <- paste0('"', bs_t[['t_delta']], '"')
-        k_arg <- as.character(k_t[['t_delta']])
+        bs_arg <- paste0('"', bs_t[[t_delta_col]], '"')
+        k_arg <- as.character(k_t[[t_delta_col]])
         for (pred_ in pred) {  # Allows nesting, permitting multiple preds to interact
             if (!is.null(bs[[pred_]])) {
                 smooth_in <- c(smooth_in, paste0('I(', pred_, ')'))
@@ -136,21 +142,27 @@ get_formula_string <- function(
         linear_in <- paste(linear_in, collapse=', ')
         bs_arg <- paste(bs_arg, collapse=', ')
         k_arg <- paste(k_arg, collapse=', ')
-        pred_f <- paste0(' + te(', smooth_in, ', ', linear_in, ', k=c(', k_arg, '), bs=c(', bs_arg, '), by=mask)')
+        pred_f <- paste0(
+            ' + te(', smooth_in, ', ', linear_in, ', k=c(', k_arg, '), bs=c(', bs_arg, '), by=', mask_col, ')'
+        )
         return(pred_f)
     }
 
-    f <- paste0('~ te(t_delta, k=', k_t[['t_delta']], ', bs="', bs_t[['t_delta']], '", by=mask)')
+    f <- paste0(
+        '~ te(',t_delta_col, ', k=', k_t[[t_delta_col]], ', bs="', bs_t[[t_delta_col]], '", by=', mask_col, ')'
+    )
     for (pred in preds) {
         pred_f <- get_pred_formula(pred, k, k_t, bs, bs_t)
         f <- paste0(f, pred_f)
     }
     for (ran_gf in ran_gfs) {
         if (random_intercept[[ran_gf]]) {
-            f <- paste0(f, ' + te(', ran_gf, ', bs="re", by=mask)')
+            f <- paste0(f, ' + te(', ran_gf, ', bs="re", by=', mask_col, ')')
         }
         if (random_rate[[ran_gf]]) {
-            f <- paste0(f, ' + te(t_delta, ', ran_gf, ', bs=c("', bs_t[['t_delta']], '", "re"), by=mask)')
+            f <- paste0(
+                f, ' + te(', t_delta_col, ', ', ran_gf, ', bs=c("', bs_t[[t_delta_col]], '", "re"), by=', mask_col, ')'
+            )
         }
         if (random_irf[[ran_gf]]) {
             for (pred in preds) {

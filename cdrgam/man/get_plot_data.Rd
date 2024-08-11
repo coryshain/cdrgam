@@ -16,7 +16,8 @@ get_plot_data(
   yaxis = NULL,
   ylim = NULL,
   yres = NULL,
-  reshape_3d = FALSE
+  reshape_3d = FALSE,
+  mask_col = "mask"
 )
 }
 \arguments{
@@ -59,6 +60,9 @@ will default to 32.}
 data into the matrix format expected by \code{plotly}'s 3D plotting
 functions. If FALSE, all values will be returned as flattened vectors,
 which can be used to e.g., construct heatmaps using \code{ggplot2}.}
+
+\item{mask_col}{A string specifying the name of the column
+containing the mask over valid timepoints.}
 }
 \value{
 A list containing the following elements:
