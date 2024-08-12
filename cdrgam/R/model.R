@@ -1,16 +1,101 @@
+fit_cdrnn <- function(
+        cfg,
+        model_name
+) {
+    if (!('data' %in% names(cfg))) {
+        stop('Required field "data" missing from config')
+    }
+    if (!(model_name %in% names(cfg))) {
+        stop(paste0('Required field "', model_name, '" missing from config'))
+    }
+    data_cfg <- cfg$data
+    model_cfg <- cfg[[model_name]]
+
+    # Load data
+    X_train <- data_cfg$X_train
+    if (is.string(X_train)) {  # Provided as a filepath
+        X_train <- get(load(X_train))
+    }
+    Y_train <- data_cfg$Y_train
+    if (is.string(Y_train)) {  # Provided as a filepath
+        Y_train <- get(load(Y_train))
+    }
+    train <- get_cdr_data(
+        data_cfg$X_train,
+        data_cfg$Y_train,
+        response_name=model_cfg$response_name,
+        predictor_names=cfg$predictor_names,
+        ranef_names=cfg$predictor_names,
+        history_length=model_cfg$history_length,
+        future_length=model_cfg$future_length,
+        t_delta_cutoff=model_cfg$t_delta_cutoff
+    )
+    means <- get_cdr_means(train)
+    sds <- get_cdr_sds(train)
+    quantiles <- get_cdr_quantiles(train)
+
+    # Construct formula
+    f_fixed <- get_formula_string(cfg$PRED_COLS, k=cfg$K, k_t=cfg$K_T, bs=cfg$BS, bs_t=cfg$BS_T)
+    f_subj <- get_formula_string(cfg$PRED_COLS, k=cfg$K, k_t=cfg$K_T, bs=cfg$BS, bs_t=cfg$BS_T, ran_gf='subject')
+    f_item <- get_formula_string(NULL, k=cfg$K, k_t=cfg$K_T, bs=cfg$BS, bs_t=cfg$BS_T, ran_gf='item', use_rate=FALSE)
+    f <- paste(f_fixed, f_subj, f_item, sep=' + ')
+
+    # Fit model
+    if (cfg$FIT) {
+        message('Fitting')
+        message(paste0('  Model: ', f))
+        m <- mgcv::gam(
+            as.formula(paste(cfg$DV, f, sep=' ~ ')),
+            data=train,
+            gamma=0.1,
+            optimizer=c('outer', 'optim'),
+            drop.unused.levels=FALSE
+        )
+        out <- list(
+            m=m,
+            means=means,
+            sds=sds,
+            quantiles=quantiles
+        )
+        save(out, file=paste0(cfg$MODEL_NAME, '.RData'))
+    } else {
+        message('Loading')
+        out <- get(load(paste0(cfg$MODEL_NAME, '.RData')))
+        m <- out$m
+        means <- out$means
+        sds <- out$sds
+        quantiles <- out$quantiles
+    }
+
+    print(summary(m))
+    sink(paste0(cfg$MODEL_NAME, '_eval.txt'))
+    print(summary(m))
+    sink()
+
+    if (cfg$EVAL) {
+        ll_train <- evaluate(m, train, train[[cfg$DV]])
+    }
+}
+
+get_columns_from_cfg <- function(
+        cfg
+) {
+    #TODO: Implement
+}
+
 #' Compute a standard CDR-GAM formula string
 #'
 #' Compute a string representation of the right-hand side (RHS) of a standard
 #' CDR-GAM formula from a set of preditors (or predictor sets in the case of
-#' interactions) and optional parameters. The model will contain a "rate"
-#' term (deconvolutional intercepts), additive impulse response functions
-#' (IRFs) for each predictor set individually, and corresponding
-#' intercept, rate, and IRF terms for each random grouping factor, if
-#' applicable. Model formulas can of course be written by the modeler,
-#' so this is simply a convenience function for typical cases, which
-#' guarantees that the resulting model is a valid CDR-GAM. However, since
-#' the function returns a string, the output can be edited as needed by
-#' the modeler in special cases.
+#' interactions) and optional parameters. Model formulas can of course be
+#' hand written, so this is simply a convenience function for typical cases,
+#' which guarantees that the resulting model is a valid CDR-GAM. However,
+#' since the function returns a string, the output can be edited as needed by
+#' the modeler in special cases. The function returns either a set of fixed
+#' effects terms or a set of random effects terms (if `ran_gf` is provided).
+#' Thus, to construct mixed models, simply call this function multiple times,
+#' once for the fixed effects specification and once for each random effects
+#' specification, and concatenate the results with a `+` separator.
 #'
 #' @param preds A character vector of predictor names, or a list of character
 #'   vectors of predictor names. If a list, each element of the list--i.e.,
@@ -33,16 +118,12 @@
 #' @param bs_t A character or list of characters, the basis function for the
 #'   IRF splines for the time delta variable of each IRF. If a single character,
 #'   the same value is used for all IRFs. See `?mgcv::smooth.terms` for details.
-#' @param ran_gfs A character vector of random grouping factor names. If
-#'   provided, the formula will include terms for the random grouping factors.
-#'   If NULL, no random effects terms are included.
-#' @param random_intercept A logical, whether to include random intercept terms
-#'   for the random grouping factors. Ignored if `ran_gfs` is NULL.
-#' @param random_rate A logical, whether to include random rate (deconvolutional
-#'   intercept) terms for the random grouping factors. Ignored if `ran_gfs` is
-#'   NULL.
-#' @param random_irf A logical, whether to include random IRF terms for the
-#'   random grouping factors. Ignored if `ran_gfs` is NULL.
+#' @param use_intercept A logical, whether to include an intercept term
+#' @param use_rate A logical, whether to a rate (deconvolutional
+#'   intercept) term
+#' @param ran_gf A string containing the name of a random grouping factor. If
+#'   provided, the formula will interact all terms with the random grouping factor.
+#'   If NULL, the string will represent fixed effects terms.
 #' @param t_delta_col A string specifying the name of the column
 #'   containing the difference in time between impulses and response.
 #' @param mask_col A string specifying the name of the column
@@ -55,10 +136,9 @@ get_formula_string <- function(
         k_t=10,
         bs='cr',
         bs_t='cr',
-        ran_gfs=NULL,
-        random_intercept=TRUE,
-        random_rate=TRUE,
-        random_irf=TRUE,
+        use_intercept=TRUE,
+        use_rate=TRUE,
+        ran_gf=NULL,
         t_delta_col='t_delta',
         mask_col='mask'
 ) {
@@ -104,12 +184,6 @@ get_formula_string <- function(
     k_t <- expand_arg(k_t, preds, 'k_t', type='numeric', add_t_delta=TRUE)
     bs <- expand_arg(bs, preds, 'bs', type='character')
     bs_t <- expand_arg(bs_t, preds, 'bs_t', type='character', add_t_delta=TRUE)
-    if (is.null(ran_gfs)) {
-        ran_gfs <- character()
-    }
-    random_intercept <- expand_arg(random_intercept, ran_gfs, 'random_intercept', type='logical')
-    random_rate <- expand_arg(random_rate, ran_gfs, 'random_rate', type='logical')
-    random_irf <- expand_arg(random_irf, ran_gfs, 'random_irf', type='logical')
 
     # Helper function to simplify per-predictor code
     get_pred_formula <- function(
@@ -143,34 +217,35 @@ get_formula_string <- function(
         bs_arg <- paste(bs_arg, collapse=', ')
         k_arg <- paste(k_arg, collapse=', ')
         pred_f <- paste0(
-            ' + te(', smooth_in, ', ', linear_in, ', k=c(', k_arg, '), bs=c(', bs_arg, '), by=', mask_col, ')'
+            'te(', smooth_in, ', ', linear_in, ', k=c(', k_arg, '), bs=c(', bs_arg, '), by=', mask_col, ')'
         )
         return(pred_f)
     }
 
-    f <- paste0(
-        '~ te(',t_delta_col, ', k=', k_t[[t_delta_col]], ', bs="', bs_t[[t_delta_col]], '", by=', mask_col, ')'
-    )
+    f <- character()
+    if (use_intercept)  {
+        if (is.null(ran_gf)) {
+            f <- c(f, '1')
+        } else {
+            f <- c(f, paste0('te(', ran_gf, ', bs="re", by=', mask_col, ')'))
+        }
+    }
+    if (use_rate) {
+        if (is.null(ran_gf)) {
+            f <- c(f, paste0(
+                'te(',t_delta_col, ', k=', k_t[[t_delta_col]], ', bs="', bs_t[[t_delta_col]], '", by=', mask_col, ')'
+            ))
+        } else {
+            f <- c(f, paste0(
+                'te(', t_delta_col, ', ', ran_gf, ', k=', k_t[[t_delta_col]],
+                ', bs=c("', bs_t[[t_delta_col]], '", "re"), by=', mask_col, ')'
+            ))
+        }
+    }
     for (pred in preds) {
-        pred_f <- get_pred_formula(pred, k, k_t, bs, bs_t)
-        f <- paste0(f, pred_f)
+        f <- c(f, get_pred_formula(pred, k, k_t, bs, bs_t, ran_gf=ran_gf))
     }
-    for (ran_gf in ran_gfs) {
-        if (random_intercept[[ran_gf]]) {
-            f <- paste0(f, ' + te(', ran_gf, ', bs="re", by=', mask_col, ')')
-        }
-        if (random_rate[[ran_gf]]) {
-            f <- paste0(
-                f, ' + te(', t_delta_col, ', ', ran_gf, ', bs=c("', bs_t[[t_delta_col]], '", "re"), by=', mask_col, ')'
-            )
-        }
-        if (random_irf[[ran_gf]]) {
-            for (pred in preds) {
-                pred_f <- get_pred_formula(pred, k, k_t, bs, bs_t, ran_gf=ran_gf)
-                f <- paste0(f, pred_f)
-            }
-        }
-    }
+    f <- paste(f, collapse=' + ')
     return(f)
 }
 

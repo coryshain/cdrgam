@@ -10,10 +10,9 @@ get_formula_string(
   k_t = 10,
   bs = "cr",
   bs_t = "cr",
-  ran_gfs = NULL,
-  random_intercept = TRUE,
-  random_rate = TRUE,
-  random_irf = TRUE,
+  use_intercept = TRUE,
+  use_rate = TRUE,
+  ran_gf = NULL,
   t_delta_col = "t_delta",
   mask_col = "mask"
 )
@@ -45,19 +44,14 @@ the IRF will be constrained to be linear in the predictor.}
 IRF splines for the time delta variable of each IRF. If a single character,
 the same value is used for all IRFs. See \code{?mgcv::smooth.terms} for details.}
 
-\item{ran_gfs}{A character vector of random grouping factor names. If
-provided, the formula will include terms for the random grouping factors.
-If NULL, no random effects terms are included.}
+\item{use_intercept}{A logical, whether to include an intercept term}
 
-\item{random_intercept}{A logical, whether to include random intercept terms
-for the random grouping factors. Ignored if \code{ran_gfs} is NULL.}
+\item{use_rate}{A logical, whether to a rate (deconvolutional
+intercept) term}
 
-\item{random_rate}{A logical, whether to include random rate (deconvolutional
-intercept) terms for the random grouping factors. Ignored if \code{ran_gfs} is
-NULL.}
-
-\item{random_irf}{A logical, whether to include random IRF terms for the
-random grouping factors. Ignored if \code{ran_gfs} is NULL.}
+\item{ran_gf}{A string containing the name of a random grouping factor. If
+provided, the formula will interact all terms with the random grouping factor.
+If NULL, the string will represent fixed effects terms.}
 
 \item{t_delta_col}{A string specifying the name of the column
 containing the difference in time between impulses and response.}
@@ -71,13 +65,13 @@ A string representing the RHS of the model formula
 \description{
 Compute a string representation of the right-hand side (RHS) of a standard
 CDR-GAM formula from a set of preditors (or predictor sets in the case of
-interactions) and optional parameters. The model will contain a "rate"
-term (deconvolutional intercepts), additive impulse response functions
-(IRFs) for each predictor set individually, and corresponding
-intercept, rate, and IRF terms for each random grouping factor, if
-applicable. Model formulas can of course be written by the modeler,
-so this is simply a convenience function for typical cases, which
-guarantees that the resulting model is a valid CDR-GAM. However, since
-the function returns a string, the output can be edited as needed by
-the modeler in special cases.
+interactions) and optional parameters. Model formulas can of course be
+hand written, so this is simply a convenience function for typical cases,
+which guarantees that the resulting model is a valid CDR-GAM. However,
+since the function returns a string, the output can be edited as needed by
+the modeler in special cases. The function returns either a set of fixed
+effects terms or a set of random effects terms (if \code{ran_gf} is provided).
+Thus, to construct mixed models, simply call this function multiple times,
+once for the fixed effects specification and once for each random effects
+specification, and concatenate the results with a \code{+} separator.
 }
