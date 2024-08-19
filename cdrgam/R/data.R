@@ -269,7 +269,7 @@ apply_filters <- function(Y, filters=NULL) {
                 factor_to_count[[count_by_factor[['Group.1']][i]]] <- count_by_factor[['x']][i]
             }
             factor_counts <- lapply(grouping_factor, function(x) {factor_to_count[[x]]})
-            sel <- sel & (factor_counts > filter$min)
+            sel <- sel & (factor_counts >= filter$min)
         } else {
             stop(paste0('Filter design not recognized. Got names "', paste(names(filter), collapse=', '), '".'))
         }
