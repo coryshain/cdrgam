@@ -28,7 +28,14 @@ development version from GitHub with:
 devtools::install_github("coryshain/cdrgam")
 ```
 
-Once installed, load it you would any other R package:
+Alternatively, to avoid installing the `devtools` package, you can
+run the following from the root of this repository:
+
+``` r
+install.packages("cdrgam", repos = NULL, type = "source")
+```
+
+Once installed, load it as you would any other R package:
 
 ``` r
 library(cdrgam)
