@@ -30,5 +30,9 @@ based on the following fields:
 a grouping factor
 \item \code{min}: An integer specifying the minimum number of observations in
 a group (groups with fewer observations than this are discarded)
+Note that when Design 2 filters are used, the order of filters matters,
+because the minimum will be computed against the previous data state,
+and prior filters may have already removed enough observations from
+factor groups for them to qualify for removal by the current filter.
 }
 }

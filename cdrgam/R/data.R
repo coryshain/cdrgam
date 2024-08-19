@@ -100,6 +100,9 @@ get_cdr_data <- function(
         mask_col='mask',
         verbose=TRUE
 ) {
+    if (verbose) {
+        message('  Loading data')
+    }
     # Distinguish series groups
     if (is.null(series_ids)) {
         series_id <- '!!!SERIES_ID!!!'
@@ -260,18 +263,21 @@ get_cdr_data <- function(
 #'    a grouping factor
 #' - `min`: An integer specifying the minimum number of observations in
 #'    a group (groups with fewer observations than this are discarded)
+#' Note that when Design 2 filters are used, the order of filters matters,
+#' because the minimum will be computed against the previous data state,
+#' and prior filters may have already removed enough observations from
+#' factor groups for them to qualify for removal by the current filter.
 #'
 #' @param Y A data.frame with N rows.
 #' @param filters A list of filters to apply to the response data.
 #' @return A data.frame containing only the rows of `Y` that pass all filters.
 #' @export
 apply_filters <- function(Y, filters=NULL) {
-    sel <- rep(TRUE, nrow(Y))
     for (filter in filters) {
         if (mean(c('column', 'fun') %in% names(filter)) == 1) {
             # Design 1 filter
             args <- c(list(Y[[filter$column]], filter$fun), filter$args)
-            sel <- sel & do.call(sapply, args)
+            sel <- do.call(sapply, args)
         } else if (mean(c('factor', 'min') %in% names(filter)) == 1) {
             # Design 2 filter
             grouping_factor <- as.character(Y[[filter$factor]])
@@ -281,12 +287,13 @@ apply_filters <- function(Y, filters=NULL) {
                 factor_to_count[[count_by_factor[['Group.1']][i]]] <- count_by_factor[['x']][i]
             }
             factor_counts <- lapply(grouping_factor, function(x) {factor_to_count[[x]]})
-            sel <- sel & (factor_counts >= filter$min)
+            sel <- (factor_counts >= filter$min)
         } else {
             stop(paste0('Filter design not recognized. Got names "', paste(names(filter), collapse=', '), '".'))
         }
+        Y <- Y[sel,]
     }
-    return(Y[sel,])
+    return(Y)
 }
 
 #' Get time windows for each observation in Y
