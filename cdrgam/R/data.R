@@ -30,6 +30,9 @@
 #' @param ranef_names A character vector of column names in `X` and `Y` that
 #'   contain random grouping factors. If NULL, no random grouping factors
 #'   are included in the dataset.
+#' @param other_names A character vector of column names in `Y` that are
+#'   to be used in standard GAM smooths or parametric terms, not convolutional
+#'   (IRF) terms. If NULL, no additional columns are included in the dataset.
 #' @param ranef_levels A character vector of factor levels to use for
 #'   constructing random grouping factors. If NULL, factor levels are
 #'   inferred automatically. IMPORTANT: This parameter is strongly
@@ -72,6 +75,7 @@ get_cdr_data <- function(
         predictor_names,
         series_ids=NULL,
         ranef_names=NULL,
+        other_names=NULL,
         ranef_levels=NULL,
         history_length=16,
         future_length=0,
@@ -96,13 +100,8 @@ get_cdr_data <- function(
     }
 
     # Ensure sort order
-    if (is.null(series_id)) {
-        X_ix_sort <- do.call(order, X[[time_col]])
-        Y_ix_sort <- do.call(order, Y[[time_col]])
-    } else {
-        X_ix_sort <- do.call(order, cbind(data.frame(X[,series_ids]), X[[time_col]]))
-        Y_ix_sort <- do.call(order, cbind(data.frame(Y[,series_ids]), Y[[time_col]]))
-    }
+    X_ix_sort <- do.call(order, cbind(data.frame(X[,series_id]), X[[time_col]]))
+    Y_ix_sort <- do.call(order, cbind(data.frame(Y[,series_id]), Y[[time_col]]))
     X <- X[X_ix_sort,]
     Y <- Y[Y_ix_sort,]
 
@@ -155,9 +154,9 @@ get_cdr_data <- function(
       windows <- get_time_windows(
         X,
         Y,
-        series_ids = series_id,
-        window_length = history_length,
-        t_delta_cutoff = t_delta_cutoff,
+        series_ids=series_id,
+        window_length=history_length,
+        t_delta_cutoff=t_delta_cutoff,
         time_col=time_col,
         verbose=verbose
       )
@@ -168,10 +167,10 @@ get_cdr_data <- function(
       windows <- get_time_windows(
         X,
         Y,
-        series_ids = series_id,
-        window_length = future_length,
-        forward = TRUE,
-        t_delta_cutoff = t_delta_cutoff,
+        series_ids=series_id,
+        window_length=future_length,
+        forward=TRUE,
+        t_delta_cutoff=t_delta_cutoff,
         time_col=time_col,
         verbose=verbose
       )
@@ -196,6 +195,18 @@ get_cdr_data <- function(
         for (predictor_name in predictor_names) {
             out[[predictor_name]][i, out_ix] <- X[[predictor_name]][in_ix]
         }
+    }
+
+    for (other_name in other_names) {
+        if (other_name %in% names(out)) {  # Already processed, skip
+            next
+        } else if (!(other_name %in% names(Y))) {
+            stop(paste0('Column ', other_name, ' not found in Y'))
+        }
+        other <- Y[[other_name]]
+        dim(other) <- c(n, 1)
+        class(other) <- class(Y[[other_name]])
+        out[[other_name]] <- other
     }
 
     return(out)

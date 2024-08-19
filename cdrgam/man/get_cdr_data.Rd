@@ -11,6 +11,7 @@ get_cdr_data(
   predictor_names,
   series_ids = NULL,
   ranef_names = NULL,
+  other_names = NULL,
   ranef_levels = NULL,
   history_length = 16,
   future_length = 0,
@@ -42,6 +43,10 @@ are treated as a single series.}
 \item{ranef_names}{A character vector of column names in \code{X} and \code{Y} that
 contain random grouping factors. If NULL, no random grouping factors
 are included in the dataset.}
+
+\item{other_names}{A character vector of column names in \code{Y} that are
+to be used in standard GAM smooths or parametric terms, not convolutional
+(IRF) terms. If NULL, no additional columns are included in the dataset.}
 
 \item{ranef_levels}{A character vector of factor levels to use for
 constructing random grouping factors. If NULL, factor levels are

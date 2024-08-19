@@ -5,7 +5,7 @@
 \title{Compute a standard CDR-GAM formula string}
 \usage{
 get_formula_string(
-  preds,
+  irfs = NULL,
   k = 5,
   k_t = 10,
   bs = "cr",
@@ -18,14 +18,20 @@ get_formula_string(
 )
 }
 \arguments{
-\item{preds}{A character vector of predictor names, or a list of character
-vectors of predictor names. If a list, each element of the list--i.e.,
-each (possibly singleton) set of predictors--defines a separate smooth
-that will be added to the model. A smooth involving multiple predictors
-will represent an IRF of the interaction of all predictors in the set.
-For example, \code{c('a', 'b')} will create independent IRFs for \code{a} and \code{b},
-whereas \code{list('a', 'b', c('a', 'b'))} will additionally create an IRF
-of the interaction of \code{a} and \code{b}.}
+\item{irfs}{A character vector of predictor names, or a list of character
+vectors of predictor names, or a list of lists of character vectors of
+predictor names. If a list, each element of the list--i.e., each
+(possibly singleton) set of predictors--defines a separate smooth
+that will be added to the model. If a list of lists, each element must
+be a pair (list of length 2) in which the first subelement (named
+"inputs") is a character vector of predictors to include in the
+inputs to the IRF, and the second subelement (named "impulses") is
+a character vector of impulses to convolve using the IRF.
+A smooth involving multiple predictors will represent an IRF of the
+interaction of all predictors in the set. For example, \code{c('a', 'b')} will
+create independent IRFs for \code{a} and \code{b}, whereas
+\code{list('a', 'b', c('a', 'b'))} will additionally create an IRF of the
+interaction of \code{a} and \code{b}.}
 
 \item{k}{A numeric or list of numerics, the degree of the IRF splines for
 each predictor. If a single numeric, the same value is used for all

@@ -1,4 +1,29 @@
-CDRGAM.POPULATION_CODE <- '!!!POPULATION!!!'
+GLOBAL.CDRGAM <- list(
+    population_code='!!!POPULATION!!!',
+    data=list(
+        sep=',',
+        history_length=16,
+        future_length=0,
+        t_delta_cutoff=NULL
+    ),
+    formula=list(
+        k_t=10,
+        k=10,
+        bs_t='cr',
+        bs='cr'
+    ),
+    model=list(
+        gamma=1,
+        family='gaussian'
+    ),
+    plot=list(
+        t_delta_xlim=NULL,
+        width=2,
+        height=1.6,
+        scale=4,
+        legend=TRUE
+    )
+)
 
 #' Get the CDR-GAM population code
 #'
@@ -9,5 +34,5 @@ CDRGAM.POPULATION_CODE <- '!!!POPULATION!!!'
 #' @returns A string
 #' @export
 get_cdr_population_code <- function() {
-    return(CDRGAM.POPULATION_CODE)
+    return(GLOBAL.CDRGAM[['population_code']])
 }
