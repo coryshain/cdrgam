@@ -13,6 +13,7 @@ get_formula_string(
   use_intercept = TRUE,
   use_rate = TRUE,
   ran_gf = NULL,
+  others = NULL,
   t_delta_col = "t_delta",
   mask_col = "mask"
 )
@@ -58,6 +59,16 @@ intercept) term}
 \item{ran_gf}{A string containing the name of a random grouping factor. If
 provided, the formula will interact all terms with the random grouping factor.
 If NULL, the string will represent fixed effects terms.}
+
+\item{others}{A character vector of additional \code{mgcv} GAM terms to include
+in the model without convolving them. All predictors in these terms must
+be found in the response data (\code{Y}), since only the response is guaranteed
+to be conformable without convolution. To distinguish these terms (encoded
+as vectors) from potentially identically-named convolved predictors (encoded
+as matrices), the column must be suffixed with '_Y' in the term. Thus, to
+add a term that fits a non-convolutional smooth to a predictor called \code{time},
+the term should use \code{time_Y}, e.g.:
+\code{te(time_Y, k=10, bs='cr')}}
 
 \item{t_delta_col}{A string specifying the name of the column
 containing the difference in time between impulses and response.}

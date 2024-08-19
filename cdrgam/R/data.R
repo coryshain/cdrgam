@@ -217,15 +217,27 @@ get_cdr_data <- function(
         }
     }
 
+    Y_ <- Y
+    cols <- names(Y_)
+    for (col in cols) {
+        col_Y <- paste0(col, '_Y')
+        new_col <- Y_[[col]]
+        if (is.character(new_col)) {
+            new_col <- as.factor(new_col)
+        }
+        dim(new_col) <- c(n, 1)
+        Y_[[col_Y]] <- new_col
+    }
+
     for (other_name in other_names) {
         if (other_name %in% names(out)) {  # Already processed, skip
             next
-        } else if (!(other_name %in% names(Y))) {
+        } else if (!(other_name %in% names(Y_))) {
             stop(paste0('Column ', other_name, ' not found in Y'))
         }
-        other <- Y[[other_name]]
+        other <- Y_[[other_name]]
         dim(other) <- c(n, 1)
-        class(other) <- class(Y[[other_name]])
+        class(other) <- class(Y_[[other_name]])
         out[[other_name]] <- other
     }
 

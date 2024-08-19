@@ -502,6 +502,15 @@ get_others_from_cfg <- function(
 #' @param ran_gf A string containing the name of a random grouping factor. If
 #'   provided, the formula will interact all terms with the random grouping factor.
 #'   If NULL, the string will represent fixed effects terms.
+#' @param others A character vector of additional `mgcv` GAM terms to include
+#'   in the model without convolving them. All predictors in these terms must
+#'   be found in the response data (`Y`), since only the response is guaranteed
+#'   to be conformable without convolution. To distinguish these terms (encoded
+#'   as vectors) from potentially identically-named convolved predictors (encoded
+#'   as matrices), the column must be suffixed with '_Y' in the term. Thus, to
+#'   add a term that fits a non-convolutional smooth to a predictor called `time`,
+#'   the term should use `time_Y`, e.g.:
+#'       `te(time_Y, k=10, bs='cr')`
 #' @param t_delta_col A string specifying the name of the column
 #'   containing the difference in time between impulses and response.
 #' @param mask_col A string specifying the name of the column
@@ -517,6 +526,7 @@ get_formula_string <- function(
         use_intercept=TRUE,
         use_rate=TRUE,
         ran_gf=NULL,
+        others=NULL,
         t_delta_col='t_delta',
         mask_col='mask'
 ) {
@@ -637,6 +647,9 @@ get_formula_string <- function(
             inputs <- NULL
         }
         f <- c(f, get_irf_formula(impulses, k, k_t, bs, bs_t, inputs=inputs, ran_gf=ran_gf))
+    }
+    for (other in others) {
+        f <- c(f, other)
     }
     f <- paste(f, collapse=' + ')
     return(f)
