@@ -1,37 +1,3 @@
-#' Command-line utility for running CDR-GAM models
-#'
-#' A command-line utility for fitting, evaluating, and plotting CDR-GAM models.
-#' Wraps the `main()` function for use in the command line as follows:
-#'     `Rscript -e "cdrgam::cli()" <cfg> <model_name> --<option1> <value1> --<option2> <value2> ...`
-#' where `<cfg>` is the path to a YAML configuration file, `<model_name>` is the
-#' name of the model to fit, and `<option1>`, `<option2>`, etc., are any optional
-#' parameters to `main()`. Note that, due to limitations of command line parsing in R,
-#' the `--eval_partition` option can accept lists, but only as comma-separated (rather
-#' than space-separated) strings.
-#' @export
-cli <- function() {
-    parser <- optparse::OptionParser()
-    parser <- optparse::add_option(parser, '--cfg', help='Path to the configuration file')
-    parser <- optparse::add_option(parser, '--model_name', help='Name of the model to fit')
-    parser <- optparse::add_option(parser, '--fit', default=TRUE, help='Whether to fit the model')
-    parser <- optparse::add_option(parser, '--eval_partition', default=c('train', 'val'),
-                                   help='Partition(s) on which to evaluate')
-    parser <- optparse::add_option(parser, '--plot', default=TRUE, help='Whether to plot the model')
-    parser <- optparse::add_option(parser, '--plot_cfg', help='Path to the plot configuration file')
-    parser <- optparse::add_option(parser, '--overwrite', help='Whether to overwrite an existing model',
-                                   action='store_true')
-    cliargs <- optparse::parse_args(parser, positional_arguments=2)
-    args <- list(cfg=cliargs$args[[1]], model_name=cliargs$args[[2]])
-    for (x in names(cliargs$options)) {
-        if (x != 'help') {
-            args[[x]] <- cliargs$options[[x]]
-        } else if (x == 'eval_partition') {
-            args[[x]] <- strsplit(cliargs$options[[x]], ',')
-        }
-    }
-    do.call(main, args)
-}
-
 #' High-level CDR-GAM wrapper for fitting, evaluating, and plotting
 #'
 #' A convenience function for fitting, evaluating, and plotting a CDR-GAM model
@@ -249,7 +215,7 @@ evaluate_cdrnn <- function(
 
     output_dir <- file.path(cfg$output_dir, model_name)
     model_path <- file.path(output_dir, 'model.RData')
-    output_path <- file.path(output_dir, paste0('output_', eval_partition, '.txt'))
+    output_path <- file.path(output_dir, paste0('output_', eval_partition, '.csv'))
     eval_path <- file.path(output_dir, paste0('eval_', eval_partition, '.txt'))
 
     message('  Loading model')
@@ -325,6 +291,7 @@ plot_cdrnn <- function(
     }
 
     output_dir <- file.path(cfg$output_dir, model_name)
+    message('  Loading model')
     model <- get(load(file.path(output_dir, 'model.RData')))
     m <- model$m
     means <- model$means
@@ -332,6 +299,7 @@ plot_cdrnn <- function(
     quantiles <- model$quantiles
     name_map <- model$name_map
 
+    message('  Generating plots')
     for (i in seq_along(response_params)) {
         plot_response_name <- response_name
         for (key in names(name_map)) {
