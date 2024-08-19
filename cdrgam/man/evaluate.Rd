@@ -19,8 +19,8 @@ Each other variable should be a matrix of the same dimensionality as
 the number of rows in the matrices in \code{X}.}
 }
 \value{
-A number representing the log-likelihood of the data given the
-model
+A numeric vector representing the log-likelihood of each datapoint
+given the model. Dataset likelihood can be computed by summing this vector.
 }
 \description{
 Evaluate a CDR-GAM model on a dataset by computing the log-likelihood of the

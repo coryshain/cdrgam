@@ -167,7 +167,7 @@ get_cdr_data <- function(
     }
 
     # Compute windows
-    message('Computing and applying local time windows')
+    message('  Computing and applying local time windows')
     first_obs <- NULL
     last_obs <- NULL
     if (history_length > 0) {
@@ -372,7 +372,7 @@ get_time_windows <- function(
 
     while (i <= n) {
         if (verbose && (i == 1 || i %% 1000 == 999 || i == n)) {
-            report(paste("\r", i, "/", n))
+            report(paste("\r   ", i, "/", n))
         }
 
         if (any(Y_id_vectors[i, ] != Y_id)) {

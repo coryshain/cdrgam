@@ -83,11 +83,25 @@ main <- function(
     }
 }
 
+#' Fit a CDR-GAM model
+#'
+#' Fit a CDR-GAM model based on a configuration file. The function will load
+#' the data, fit the model, and save the model to disk. If the model already
+#' exists, the function will skip fitting unless the `overwrite` flag is set.
+#'
+#' @param cfg A configuration object or a string with the path to a YAML file
+#' @param model_name A string with the name of the model to fit
+#' @param overwrite A logical, whether to overwrite an existing model
+#' @export
 fit_cdrnn <- function(
         cfg,
         model_name,
         overwrite=FALSE
 ) {
+    message(rep('=', 80))
+    message('FITTING CDR-GAM MODEL')
+
+    # Get cfg
     if (is.string(cfg)) {  # Provided as a filepath
         cfg <- get_cfg(cfg)
     }
@@ -95,44 +109,6 @@ fit_cdrnn <- function(
     data_cfg <- cfg$data
     model_cfg <- cfg$models[[model_name]]
     name_map <- cfg$name_map
-    t_delta_ref <- data_cfg$t_delta_ref
-    if (is.null(t_delta_ref)) {
-        t_delta_ref <- 0
-    }
-
-    # Load data
-    X_train <- data_cfg$X_train
-    sep <- data_cfg$sep
-    if (is.string(X_train)) {  # Provided as a filepath
-        X_train <- read.csv(X_train, sep=sep, header=TRUE)
-    }
-    Y_train <- data_cfg$Y_train
-    if (is.string(Y_train)) {  # Provided as a filepath
-        Y_train <- read.csv(Y_train, sep=sep, header=TRUE)
-    }
-    response_name <- all.vars(as.formula(paste('~', model_cfg$response)))
-    predictor_names <- get_columns_from_cfg(model_cfg$formula)
-    ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
-    other_names <- get_others_from_cfg(model_cfg$formula)
-    train <- get_cdr_data(
-        X_train,
-        Y_train,
-        response_name=response_name,
-        predictor_names=predictor_names,
-        series_ids=data_cfg$series_ids,
-        ranef_names=ranef_names,
-        other_names=other_names,
-        filters=data_cfg$filters,
-        history_length=data_cfg$history_length,
-        future_length=data_cfg$future_length,
-        t_delta_cutoff=data_cfg$t_delta_cutoff
-    )
-    means <- get_cdr_means(train)
-    sds <- get_cdr_sds(train)
-    quantiles <- get_cdr_quantiles(train)
-
-    f <- get_formula_from_config(model_cfg$formula, response_name)
-    response_params <- names(f)
 
     # Get paths
     output_dir <- file.path(cfg$output_dir, model_name)
@@ -144,57 +120,101 @@ fit_cdrnn <- function(
 
     fit <- overwrite || !file.exists(model_path)
 
-    # Fit model
-    if (fit) {
-        message('Fitting')
-        message(paste0('  n: ', nrow(train[[response_name]])))
-        message('  Model:')
-        for (response_param in response_params) {
-            f_str <- deparse(f[[response_param]])
-            f_str <- gsub("^\\s+|\\s+$", "", f_str)
-            f_str <- paste(f_str, collapse=' ')
-            message(paste0('    ', response_param, ': ', f_str, sep=''))
-        }
-        if (length(f) == 1) {
-            f <- f[[1]]
-        }
-        fit_kwargs <- list(f, data=train, drop.unused.levels=FALSE)
-        keys <- names(model_cfg)
-        keys <- keys[keys %in% names(GLOBAL.CDRGAM$model)]
-        fit_kwargs <- c(fit_kwargs, model_cfg[keys])
-        m <- do.call(mgcv::gam, fit_kwargs)
-        model <- list(
-            m=m,
-            means=means,
-            sds=sds,
-            quantiles=quantiles,
-            response_params=response_params,
-            name_map=name_map,
-            cfg=cfg
-        )
-        save(model, file=model_path)
-    } else {
-        message('Loading')
-        model <- get(load(model_path))
-        m <- model$m
+    if (!fit) {
+        message('  Model already exists. Use --overwrite to refit.')
+        return()
     }
+
+    # Load data
+    X <- data_cfg$X_train
+    sep <- data_cfg$sep
+    if (is.string(X)) {  # Provided as a filepath
+        X <- read.csv(X, sep=sep, header=TRUE)
+    }
+    Y <- data_cfg$Y_train
+    if (is.string(Y)) {  # Provided as a filepath
+        Y <- read.csv(Y, sep=sep, header=TRUE)
+    }
+    response_name <- all.vars(as.formula(paste('~', model_cfg$response)))
+    predictor_names <- get_columns_from_cfg(model_cfg$formula)
+    ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
+    other_names <- get_others_from_cfg(model_cfg$formula)
+    cdrgam_data <- get_cdr_data(
+        X,
+        Y,
+        response_name=response_name,
+        predictor_names=predictor_names,
+        series_ids=data_cfg$series_ids,
+        ranef_names=ranef_names,
+        other_names=other_names,
+        filters=data_cfg$filters,
+        history_length=data_cfg$history_length,
+        future_length=data_cfg$future_length,
+        t_delta_cutoff=data_cfg$t_delta_cutoff
+    )
+    means <- get_cdr_means(cdrgam_data)
+    sds <- get_cdr_sds(cdrgam_data)
+    quantiles <- get_cdr_quantiles(cdrgam_data)
+
+    f <- get_formula_from_config(model_cfg$formula, model_cfg$response)
+    response_params <- names(f)
+
+    # Fit model
+    message('  Fitting')
+    message(paste0('    n: ', length(cdrgam_data[[response_name]])))
+    message('    Model:')
+    for (response_param in response_params) {
+        f_str <- deparse(f[[response_param]])
+        f_str <- gsub("^\\s+|\\s+$", "", f_str)
+        f_str <- paste(f_str, collapse=' ')
+        message(paste0('      ', response_param, ': ', f_str, sep=''))
+    }
+    if (length(f) == 1) {
+        f <- f[[1]]
+    }
+    fit_kwargs <- list(f, data=cdrgam_data, drop.unused.levels=FALSE)
+    keys <- names(model_cfg)
+    keys <- keys[keys %in% names(GLOBAL.CDRGAM$model)]
+    fit_kwargs <- c(fit_kwargs, model_cfg[keys])
+    m <- do.call(mgcv::gam, fit_kwargs)
+    model <- list(
+        m=m,
+        means=means,
+        sds=sds,
+        quantiles=quantiles,
+        response_params=response_params,
+        name_map=name_map,
+        cfg=cfg
+    )
+    save(model, file=model_path)
 
     print(summary(m))
     sink(summary_path)
     print(summary(m))
     sink()
-
-    plot_cdrnn(
-        cfg,
-        model_name=model_name
-    )
 }
 
+#' Evaluate a CDR-GAM model
+#'
+#' Evaluate a CDR-GAM model based on a configuration file. The function will
+#' load the model, compute the log-likelihood of the data given the model, and
+#' save the results to disk.
+#'
+#' @param cfg A configuration object or a string with the path to a YAML file
+#' @param model_name A string with the name of the model to evaluate
+#' @param eval_partition A string with the name of the partition on which to
+#'   evaluate the model (e.g., 'val', 'test')
+#' @param extra_cols A logical, whether to include all columns from `Y` in
+#'   the output
+#' @export
 evaluate_cdrnn <- function(
         cfg,
         model_name,
-        eval_partition="val"
+        eval_partition="val",
+        extra_cols=FALSE
 ) {
+    message(rep('=', 80))
+    message('EVALUATING CDR-GAM MODEL')
     if (is.string(cfg)) {  # Provided as a filepath
         cfg <- get_cfg(cfg)
     }
@@ -212,7 +232,7 @@ evaluate_cdrnn <- function(
     predictor_names <- get_columns_from_cfg(model_cfg$formula)
     ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
     other_names <- get_others_from_cfg(model_cfg$formula)
-    data <- get_cdr_data(
+    cdrgam_data <- get_cdr_data(
         X,
         Y,
         response_name=response_name,
@@ -225,37 +245,61 @@ evaluate_cdrnn <- function(
         future_length=data_cfg$future_length,
         t_delta_cutoff=data_cfg$t_delta_cutoff
     )
-    n <- length(data[[response_name]])
+    n <- length(cdrgam_data[[response_name]])
 
     output_dir <- file.path(cfg$output_dir, model_name)
     model_path <- file.path(output_dir, 'model.RData')
+    output_path <- file.path(output_dir, paste0('output_', eval_partition, '.txt'))
     eval_path <- file.path(output_dir, paste0('eval_', eval_partition, '.txt'))
 
+    message('  Loading model')
     model <- get(load(model_path))
     m <- model$m
     # Use model.matrix to handle responses containing transformations
-    obs <- model.matrix(as.formula(paste('~', response_name)), data=data)[,response_name]
-    ll <- evaluate(m, data, obs)$logLik
+    obs <- model.matrix(as.formula(paste('~', response_name)), data=cdrgam_data)[, response_name]
+    message('  Computing likelihoods')
+    lls <- evaluate(m, cdrgam_data, obs)$logLik
+    ll <- sum(lls)
 
-    message(paste('Model:', model_name))
+    message(paste('  Model:', model_name))
     message(paste('  partition:', eval_partition))
     message(paste('  n:', n))
     message(paste('  logLik:', ll))
     sink(eval_path)
     cat(paste('Model:', model_name, '\n'))
-    cat(paste('  partition:', eval_partition, '\n'))
-    cat(paste('  n:', n, '\n'))
-    cat(paste('  logLik:', ll, '\n'))
+    cat(paste('partition:', eval_partition, '\n'))
+    cat(paste('n:', n, '\n'))
+    cat(paste('logLik:', ll, '\n'))
     sink()
 
-    return(ll)
+    if (extra_cols) {
+        out <- Y
+        out[['cdrgam.logLik']] <- lls
+    } else {
+        out <- data.frame(cdrgam.logLik=lls)
+    }
+    write.table(out, output_path, row.names=FALSE, col.names=TRUE, sep=sep)
+    return(NULL)
 }
 
+#' Plot a CDR-GAM model
+#'
+#' Visualize the estimates of a CDR-GAM model based on a configuration file.
+#' The function will load the model, produce plots, and save the plots to disk.
+#'
+#' @param cfg A configuration object or a string with the path to a YAML file
+#' @param model_name A string with the name of the model to plot
+#' @param plot_cfg A configuration object or a string with the path to a YAML
+#'   file with additional plot configuration settings (useful for overriding
+#'   defaults used in the main config)
+#' @export
 plot_cdrnn <- function(
         cfg,
         model_name,
         plot_cfg=NULL
 ) {
+    message(rep('=', 80))
+    message('PLOTTING CDR-GAM MODEL')
     if (is.string(cfg)) {  # Provided as a filepath
         cfg <- get_cfg(cfg)
     }
@@ -275,7 +319,7 @@ plot_cdrnn <- function(
         keys <- keys[!(keys %in% names(plot_cfg))]
         plot_cfg[keys] <- plot_defaults[keys]
     }
-    t_delta_ref <- data_cfg$t_delta_ref
+    t_delta_ref <- plot_cfg$t_delta_ref
     if (is.null(t_delta_ref)) {
         t_delta_ref <- 0
     }
@@ -335,6 +379,14 @@ plot_cdrnn <- function(
     }
 }
 
+#' Validate a CDR-GAM configuration
+#'
+#' Validate a CDR-GAM configuration object to ensure that it contains the
+#' required fields.
+#'
+#' @param cfg A configuration object or a string with the path to a YAML file
+#' @param model_name A string with the name of the model to validate
+#' @export
 validate_cfg <- function(cfg, model_name) {
     if (is.string(cfg)) {  # Provided as a filepath
         cfg <- get_cfg(cfg)
@@ -350,6 +402,15 @@ validate_cfg <- function(cfg, model_name) {
     }
 }
 
+#' Get a CDR-GAM formula from a configuration
+#'
+#' Get a CDR-GAM formula from a formula configuration object. The
+#' function will return a list of formulas, one for each response parameter.
+#'
+#' @param formula_cfg A formula configuration object
+#' @param response_name A string with the name of the response variable
+#' @return A list of formulas
+#' @export
 get_formula_from_config <- function(
         formula_cfg,
         response_name
@@ -627,8 +688,8 @@ get_formula_string <- function(
 #'   'mask'. This list is typically the output of `get_cdr_data()`.
 #' @param y A numeric vector of response values. Must be the same length as
 #'   the number of rows in the matrices in `X`.
-#' @return A number representing the log-likelihood of the data given the
-#'   model
+#' @return A numeric vector representing the log-likelihood of each datapoint
+#'   given the model. Dataset likelihood can be computed by summing this vector.
 #' @export
 evaluate <- function(
         model,
@@ -641,17 +702,17 @@ evaluate <- function(
     if (family == 'gaussian') {
         mu <- response
         sigma <- sqrt(mean(residuals(model)^2))
-        ll <- sum(dnorm(y, mean=mu, sd=sigma, log=TRUE))
+        ll <- dnorm(y, mean=mu, sd=sigma, log=TRUE)
     } else if (family == 'gaulss') {
         mu <- response[, 1]
         sigma <- 1 / response[, 2]
-        ll <- sum(dnorm(y, mean=mu, sd=sigma, log=TRUE))
+        ll <- dnorm(y, mean=mu, sd=sigma, log=TRUE)
     } else if (family == 'shash') {
         mu <- response[, 1]
         sigma <- exp(response[, 2])  # mgcv represents on a log scale
         nu <- response[, 3]
         tau <- exp(response[, 4])  # mgcv represents on a log scale
-        ll <- sum(gamlss.dist::dSHASHo2(y, mean=mu, sd=sigma, nu=nu, tau=tau, log=TRUE))
+        ll <- gamlss.dist::dSHASHo2(y, mean=mu, sd=sigma, nu=nu, tau=tau, log=TRUE)
     } else {
         stop(paste0('Unknown family: ', family))
     }
