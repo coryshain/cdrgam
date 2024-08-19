@@ -38,6 +38,20 @@
 #'   inferred automatically. IMPORTANT: This parameter is strongly
 #'   encouraged for prediction datasets to ensure that factor levels are
 #'   matched to the model. Otherwise, predictions may be incorrect.
+#' @param filters A list of filters to apply to the response data. Each
+#'   filter is a list with one of two designs. Design 1 applies simple
+#'   logical comparison based on the following fields:
+#'   - `column`: A string specifying the column name in `Y` to filter.
+#'   - `fun`: A function to apply to the column values.
+#'   - `args`: A list of additional arguments to pass to `fun`.
+#'   Applying `fun` to `column` with `args` should return a logical, which
+#'   is used to filter the data (TRUE to keep, FALSE to discard).
+#'   Design 2 filters based on counts of the levels in a factor variable,
+#'   based on the following fields:
+#'   - `factor`: A string specifying the column name in `Y` to use as
+#'      a grouping factor
+#'   - `min`: An integer specifying the minimum number of observations in
+#'      a group (groups with fewer observations than this are discarded)
 #' @param history_length An integer specifying the number of rows in `X`
 #'   to include in the history (backward) window for each row in `Y`.
 #' @param future_length An integer specifying the number of rows in `X`
@@ -77,6 +91,7 @@ get_cdr_data <- function(
         ranef_names=NULL,
         other_names=NULL,
         ranef_levels=NULL,
+        filters=NULL,
         history_length=16,
         future_length=0,
         t_delta_cutoff=NULL,
@@ -104,6 +119,11 @@ get_cdr_data <- function(
     Y_ix_sort <- do.call(order, cbind(data.frame(Y[,series_id]), Y[[time_col]]))
     X <- X[X_ix_sort,]
     Y <- Y[Y_ix_sort,]
+
+    Y <- apply_filters(Y, filters)
+    if (nrow(Y) == 0) {
+        stop('No observations remain after filtering')
+    }
 
     n <- nrow(Y)
     w <- history_length + future_length
@@ -210,6 +230,51 @@ get_cdr_data <- function(
     }
 
     return(out)
+}
+
+#' Apply filters to a response matrix
+#'
+#' Apply a list of filters to a response matrix `Y`. Each filter is a list
+#' with one of two designs. Design 1 applies simple logical comparison based
+#' on the following fields:
+#' - `column`: A string specifying the column name in `Y` to filter.
+#' - `fun`: A function to apply to the column values.
+#' - `args`: A list of additional arguments to pass to `fun`.
+#' Applying `fun` to `column` with `args` should return a logical, which
+#' is used to filter the data (TRUE to keep, FALSE to discard).
+#' Design 2 filters based on counts of the levels in a factor variable,
+#' based on the following fields:
+#' - `factor`: A string specifying the column name in `Y` to use as
+#'    a grouping factor
+#' - `min`: An integer specifying the minimum number of observations in
+#'    a group (groups with fewer observations than this are discarded)
+#'
+#' @param Y A data.frame with N rows.
+#' @param filters A list of filters to apply to the response data.
+#' @return A data.frame containing only the rows of `Y` that pass all filters.
+#' @export
+apply_filters <- function(Y, filters=NULL) {
+    sel <- rep(TRUE, nrow(Y))
+    for (filter in filters) {
+        if (mean(c('column', 'fun') %in% names(filter)) == 1) {
+            # Design 1 filter
+            args <- c(list(Y[[filter$column]], filter$fun), filter$args)
+            sel <- sel & do.call(sapply, args)
+        } else if (mean(c('factor', 'min') %in% names(filter)) == 1) {
+            # Design 2 filter
+            grouping_factor <- as.character(Y[[filter$factor]])
+            count_by_factor <- aggregate(rep(1, nrow(Y)), by=list(grouping_factor), sum)
+            factor_to_count <- list()
+            for (i in 1:length(unique(count_by_factor[['Group.1']]))) {
+                factor_to_count[[count_by_factor[['Group.1']][i]]] <- count_by_factor[['x']][i]
+            }
+            factor_counts <- lapply(grouping_factor, function(x) {factor_to_count[[x]]})
+            sel <- sel & (factor_counts > filter$min)
+        } else {
+            stop(paste0('Filter design not recognized. Got names "', paste(names(filter), collapse=', '), '".'))
+        }
+    }
+    return(Y[sel,])
 }
 
 #' Get time windows for each observation in Y

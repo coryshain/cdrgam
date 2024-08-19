@@ -13,6 +13,7 @@ get_cdr_data(
   ranef_names = NULL,
   other_names = NULL,
   ranef_levels = NULL,
+  filters = NULL,
   history_length = 16,
   future_length = 0,
   t_delta_cutoff = NULL,
@@ -53,6 +54,23 @@ constructing random grouping factors. If NULL, factor levels are
 inferred automatically. IMPORTANT: This parameter is strongly
 encouraged for prediction datasets to ensure that factor levels are
 matched to the model. Otherwise, predictions may be incorrect.}
+
+\item{filters}{A list of filters to apply to the response data. Each
+filter is a list with one of two designs. Design 1 applies simple
+logical comparison based on the following fields:
+\itemize{
+\item \code{column}: A string specifying the column name in \code{Y} to filter.
+\item \code{fun}: A function to apply to the column values.
+\item \code{args}: A list of additional arguments to pass to \code{fun}.
+Applying \code{fun} to \code{column} with \code{args} should return a logical, which
+is used to filter the data (TRUE to keep, FALSE to discard).
+Design 2 filters based on counts of the levels in a factor variable,
+based on the following fields:
+\item \code{factor}: A string specifying the column name in \code{Y} to use as
+a grouping factor
+\item \code{min}: An integer specifying the minimum number of observations in
+a group (groups with fewer observations than this are discarded)
+}}
 
 \item{history_length}{An integer specifying the number of rows in \code{X}
 to include in the history (backward) window for each row in \code{Y}.}

@@ -110,7 +110,7 @@ fit_cdrnn <- function(
     if (is.string(Y_train)) {  # Provided as a filepath
         Y_train <- read.csv(Y_train, sep=sep, header=TRUE)
     }
-    response_name <- model_cfg$response
+    response_name <- all.vars(as.formula(paste('~', model_cfg$response)))
     predictor_names <- get_columns_from_cfg(model_cfg$formula)
     ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
     other_names <- get_others_from_cfg(model_cfg$formula)
@@ -122,6 +122,7 @@ fit_cdrnn <- function(
         series_ids=data_cfg$series_ids,
         ranef_names=ranef_names,
         other_names=other_names,
+        filters=data_cfg$filters,
         history_length=data_cfg$history_length,
         future_length=data_cfg$future_length,
         t_delta_cutoff=data_cfg$t_delta_cutoff
@@ -146,6 +147,7 @@ fit_cdrnn <- function(
     # Fit model
     if (fit) {
         message('Fitting')
+        message(paste0('  n: ', nrow(train[[response_name]])))
         message('  Model:')
         for (response_param in response_params) {
             f_str <- deparse(f[[response_param]])
@@ -206,7 +208,7 @@ evaluate_cdrnn <- function(
     Y_part <- paste0('Y_', eval_partition)
     X <- read.csv(data_cfg[[X_part]], sep=sep, header=TRUE)
     Y <- read.csv(data_cfg[[Y_part]], sep=sep, header=TRUE)
-    response_name <- model_cfg$response
+    response_name <- all.vars(as.formula(paste('~', model_cfg$response)))
     predictor_names <- get_columns_from_cfg(model_cfg$formula)
     ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
     other_names <- get_others_from_cfg(model_cfg$formula)
@@ -218,6 +220,7 @@ evaluate_cdrnn <- function(
         series_ids=data_cfg$series_ids,
         ranef_names=ranef_names,
         other_names=other_names,
+        filters=data_cfg$filters,
         history_length=data_cfg$history_length,
         future_length=data_cfg$future_length,
         t_delta_cutoff=data_cfg$t_delta_cutoff
@@ -230,7 +233,9 @@ evaluate_cdrnn <- function(
 
     model <- get(load(model_path))
     m <- model$m
-    ll <- evaluate(m, data, data[[response_name]])$logLik
+    # Use model.matrix to handle responses containing transformations
+    obs <- model.matrix(as.formula(paste('~', response_name)), data=data)[,response_name]
+    ll <- evaluate(m, data, obs)$logLik
 
     message(paste('Model:', model_name))
     message(paste('  partition:', eval_partition))
