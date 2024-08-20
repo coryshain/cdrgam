@@ -82,13 +82,35 @@ A string representing the RHS of the model formula
 \description{
 Compute a string representation of the right-hand side (RHS) of a standard
 CDR-GAM formula from a set of preditors (or predictor sets in the case of
-interactions) and optional parameters. Model formulas can of course be
-hand written, so this is simply a convenience function for typical cases,
-which guarantees that the resulting model is a valid CDR-GAM. However,
-since the function returns a string, the output can be edited as needed by
-the modeler in special cases. The function returns either a set of fixed
-effects terms or a set of random effects terms (if \code{ran_gf} is provided).
-Thus, to construct mixed models, simply call this function multiple times,
-once for the fixed effects specification and once for each random effects
-specification, and concatenate the results with a \code{+} separator.
+interactions) and optional parameters.
+}
+\details{
+Model formulas can of course be hand written, so this is simply a
+convenience function for typical cases, which guarantees that the
+resulting model is a valid CDR-GAM. However, since the function returns
+a string, the output can be edited as needed by the modeler in special
+cases. The function returns either a set of fixed effects terms or a set
+of random effects terms (if \code{ran_gf} is provided). Thus, to construct
+mixed models, simply call this function multiple times, once for the
+fixed effects specification and once for each random effects specification,
+and concatenate the results with a \code{+} separator.
+
+This leverages the \code{linear.functional.terms} feature of \code{mgcv}, which
+\emph{sums} the results of applying the same smooth to multiple values of a
+predictor for a given datapoint, weighting the elements in the
+summation by the value of the variable supplied to the \code{by} term of the
+smooth. When such a smooth is parameterized by the time offset \emph{t_delta}
+and \code{by} is the impulse (predictor), a \code{linear.functional.term} becomes
+a discrete convolution over time, where the smooth represents the
+impulse response. If the smooth is also parameterized by the impulse
+itself, then the IRF can be non-linear in the impulse.
+
+For example, the following \code{mgcv} term defines an IRF that is linear
+in predictor \code{a}, assuming that \code{t_delta} and \code{a} are both supplied
+as matrices as required by \code{linear.functional.terms} (see
+\code{get_cdr_data()} for details):
+\code{te(t_delta, k=10, bs='cr', by=a)}
+By contrast, the following defines an IRF that is nonlinear in \code{a}
+(because \code{a} also parameterizes the smooth itself):
+\code{te(t_delta, a, k=c(10, 5), bs=c('cr', 'cr'), by=a)}
 }

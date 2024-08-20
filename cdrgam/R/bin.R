@@ -28,8 +28,9 @@ cli <- function() {
     for (x in names(cliargs$options)) {
         if (x != 'help') {
             args[[x]] <- cliargs$options[[x]]
-        } else if (x == 'eval_partition') {
-            args[[x]] <- strsplit(cliargs$options[[x]], ',')
+            if (x == 'eval_partition') {
+                args[[x]] <- strsplit(cliargs$options[[x]], ',')[[1]]
+            }
         }
     }
     do.call(main, args)

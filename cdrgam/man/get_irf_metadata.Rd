@@ -13,7 +13,8 @@ get_irf_metadata(
   irf_name_map = NULL,
   add_rate = TRUE,
   exclude = c("t_delta", "mask"),
-  t_delta_col = "t_delta"
+  t_delta_col = "t_delta",
+  mask_col = "mask_col"
 )
 }
 \arguments{
@@ -48,6 +49,9 @@ IRF list. This is useful for models that include a rate term.}
 
 \item{t_delta_col}{A string specifying the name of the column
 containing the difference in time between impulses and response.}
+
+\item{mask_col}{A string specifying the name of the column
+containing the mask over valid timepoints.}
 }
 \value{
 A list of IRF metadata, each containing the following elements:

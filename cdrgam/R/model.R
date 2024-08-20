@@ -35,12 +35,12 @@ main <- function(
     }
     if (!is.null(eval_partition)) {
         for (eval_partition_ in eval_partition) {
-            X_part <- paste0('X_', eval_partition)
-            Y_part <- paste0('Y_', eval_partition)
+            X_part <- paste0('X_', eval_partition_)
+            Y_part <- paste0('Y_', eval_partition_)
             if (!(is.null(cfg$data[[X_part]]) || is.null(cfg$data[[Y_part]]))) {
-                evaluate_cdrnn(cfg, model_name=model_name, eval_partition=eval_partition)
+                evaluate_cdrnn(cfg, model_name=model_name, eval_partition=eval_partition_)
             } else {
-                message(paste0('No data provided for partition "', eval_partition, '". Skipping evaluation.'))
+                message(paste0('No data provided for partition "', eval_partition_, '". Skipping evaluation.'))
             }
         }
     }
@@ -84,13 +84,6 @@ fit_cdrnn <- function(
         dir.create(output_dir, recursive=TRUE)
     }
 
-    fit <- overwrite || !file.exists(model_path)
-
-    if (!fit) {
-        message('  Model already exists. Use --overwrite to refit.')
-        return()
-    }
-
     # Load data
     X <- data_cfg$X_train
     sep <- data_cfg$sep
@@ -126,32 +119,49 @@ fit_cdrnn <- function(
     response_params <- names(f)
 
     # Fit model
-    message('  Fitting')
-    message(paste0('    n: ', length(cdrgam_data[[response_name]])))
-    message('    Model:')
-    for (response_param in response_params) {
-        f_str <- deparse(f[[response_param]])
-        f_str <- gsub("^\\s+|\\s+$", "", f_str)
-        f_str <- paste(f_str, collapse=' ')
-        message(paste0('      ', response_param, ': ', f_str, sep=''))
+    fit <- overwrite || !file.exists(model_path)
+    if (fit) {
+        message('  Fitting')
+        message(paste0('    n: ', length(cdrgam_data[[response_name]])))
+        message('    Model:')
+        for (response_param in response_params) {
+            f_str <- deparse(f[[response_param]])
+            f_str <- gsub("^\\s+|\\s+$", "", f_str)
+            f_str <- paste(f_str, collapse=' ')
+            message(paste0('      ', response_param, ': ', f_str, sep=''))
+        }
+        if (length(f) == 1) {
+            f <- f[[1]]
+        }
+        fit_kwargs <- list(f, data=cdrgam_data, drop.unused.levels=FALSE)
+        keys <- names(model_cfg)
+        keys <- keys[keys %in% names(GLOBAL.CDRGAM$model)]
+        fit_kwargs <- c(fit_kwargs, model_cfg[keys])
+        m <- do.call(mgcv::gam, fit_kwargs)
+        model <- list(
+            m=m,
+            means=means,
+            sds=sds,
+            quantiles=quantiles,
+            response_params=response_params,
+            name_map=name_map,
+            cfg=cfg
+        )
+    } else {
+        message('  Model already exists, skipping fitting and reloading')
+        model <- get(load(model_path))
+        m <- model$m
+        model <- list(
+            m=m,
+            means=means,
+            sds=sds,
+            quantiles=quantiles,
+            response_params=response_params,
+            name_map=name_map,
+            cfg=cfg
+        )
     }
-    if (length(f) == 1) {
-        f <- f[[1]]
-    }
-    fit_kwargs <- list(f, data=cdrgam_data, drop.unused.levels=FALSE)
-    keys <- names(model_cfg)
-    keys <- keys[keys %in% names(GLOBAL.CDRGAM$model)]
-    fit_kwargs <- c(fit_kwargs, model_cfg[keys])
-    m <- do.call(mgcv::gam, fit_kwargs)
-    model <- list(
-        m=m,
-        means=means,
-        sds=sds,
-        quantiles=quantiles,
-        response_params=response_params,
-        name_map=name_map,
-        cfg=cfg
-    )
+    message('  Saving')
     save(model, file=model_path)
 
     print(summary(m))
@@ -297,7 +307,11 @@ plot_cdrnn <- function(
     means <- model$means
     sds <- model$sds
     quantiles <- model$quantiles
-    name_map <- model$name_map
+    if ('name_map' %in% names(plot_cfg)) {
+        name_map <- plot_cfg$name_map
+    } else {
+        name_map <- model$name_map
+    }
 
     message('  Generating plots')
     for (i in seq_along(response_params)) {
@@ -459,15 +473,36 @@ get_others_from_cfg <- function(
 #'
 #' Compute a string representation of the right-hand side (RHS) of a standard
 #' CDR-GAM formula from a set of preditors (or predictor sets in the case of
-#' interactions) and optional parameters. Model formulas can of course be
-#' hand written, so this is simply a convenience function for typical cases,
-#' which guarantees that the resulting model is a valid CDR-GAM. However,
-#' since the function returns a string, the output can be edited as needed by
-#' the modeler in special cases. The function returns either a set of fixed
-#' effects terms or a set of random effects terms (if `ran_gf` is provided).
-#' Thus, to construct mixed models, simply call this function multiple times,
-#' once for the fixed effects specification and once for each random effects
-#' specification, and concatenate the results with a `+` separator.
+#' interactions) and optional parameters.
+#'
+#' Model formulas can of course be hand written, so this is simply a
+#' convenience function for typical cases, which guarantees that the
+#' resulting model is a valid CDR-GAM. However, since the function returns
+#' a string, the output can be edited as needed by the modeler in special
+#' cases. The function returns either a set of fixed effects terms or a set
+#' of random effects terms (if `ran_gf` is provided). Thus, to construct
+#' mixed models, simply call this function multiple times, once for the
+#' fixed effects specification and once for each random effects specification,
+#' and concatenate the results with a `+` separator.
+#'
+#' This leverages the `linear.functional.terms` feature of `mgcv`, which
+#' *sums* the results of applying the same smooth to multiple values of a
+#' predictor for a given datapoint, weighting the elements in the
+#' summation by the value of the variable supplied to the `by` term of the
+#' smooth. When such a smooth is parameterized by the time offset *t_delta*
+#' and `by` is the impulse (predictor), a `linear.functional.term` becomes
+#' a discrete convolution over time, where the smooth represents the
+#' impulse response. If the smooth is also parameterized by the impulse
+#' itself, then the IRF can be non-linear in the impulse.
+#'
+#' For example, the following `mgcv` term defines an IRF that is linear
+#' in predictor `a`, assuming that `t_delta` and `a` are both supplied
+#' as matrices as required by `linear.functional.terms` (see
+#' `get_cdr_data()` for details):
+#'     `te(t_delta, k=10, bs='cr', by=a)`
+#' By contrast, the following defines an IRF that is nonlinear in `a`
+#' (because `a` also parameterizes the smooth itself):
+#'     `te(t_delta, a, k=c(10, 5), bs=c('cr', 'cr'), by=a)`
 #'
 #' @param irfs A character vector of predictor names, or a list of character
 #'   vectors of predictor names, or a list of lists of character vectors of
@@ -584,7 +619,8 @@ get_formula_string <- function(
             ran_gf=NULL
     ) {
         smooth_in <- t_delta_col
-        linear_in <- character()
+        ranef_in <- character()
+        by_in <- character()
         bs_arg <- paste0('"', bs_t[[t_delta_col]], '"')
         k_arg <- as.character(k_t[[t_delta_col]])
         if (is.null(inputs)) {  # Assume identity between IRF inputs and impulses
@@ -592,28 +628,35 @@ get_formula_string <- function(
         }
         for (input in inputs) {  # Allows nesting, permitting multiple preds to interact
             if (!is.null(bs[[input]])) {
-                smooth_in <- c(smooth_in, paste0('I(', input, ')'))
+                # smooth_in <- c(smooth_in, paste0('I(', input, ')'))
+                smooth_in <- c(smooth_in, input)
                 bs_arg <- c(bs_arg, paste0('"', bs[[input]], '"'))
                 k_arg <- c(k_arg, as.character(k[[input]]))
             }
         }
         for (impulse in impulses) {  # Allows nesting, permitting multiple preds to interact
-            linear_in <- c(linear_in, impulse)
+            by_in <- c(by_in, impulse)
         }
-        bs_arg <- c(bs_arg, rep('"re"', length(impulses))) # Add re bases for linear terms
+        # bs_arg <- c(bs_arg, rep('"re"', length(impulses))) # Add re bases for linear terms
         if (!(is.null(ran_gf))) {
             # Add random grouping factor
             for (ran_gf_ in ran_gf) {  # Allows nesting, for crossed random grouping factors
-                linear_in <- c(linear_in, ran_gf)
+                ranef_in <- c(ranef_in, ran_gf)
                 bs_arg <- c(bs_arg, '"re"')
             }
         }
         smooth_in <- paste(smooth_in, collapse=', ')
-        linear_in <- paste(linear_in, collapse=', ')
+        ranef_in <- paste(ranef_in, collapse=', ')
+        if (is.null(ran_gf)) {
+            preds <- smooth_in
+        } else {
+            preds <- paste(smooth_in, ranef_in, sep=', ')
+        }
+        by_in <- paste(by_in, collapse='*')
         bs_arg <- paste(bs_arg, collapse=', ')
         k_arg <- paste(k_arg, collapse=', ')
         pred_f <- paste0(
-            'te(', smooth_in, ', ', linear_in, ', k=c(', k_arg, '), bs=c(', bs_arg, '), by=', mask_col, ')'
+            'te(', preds, ', k=c(', k_arg, '), bs=c(', bs_arg, '), by=', by_in, ')'
         )
         return(pred_f)
     }

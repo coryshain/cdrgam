@@ -394,6 +394,8 @@ plot_lines <- function(
 #' @param exclude A character vector of term names to exclude from the IRF list.
 #' @param t_delta_col A string specifying the name of the column
 #'   containing the difference in time between impulses and response.
+#' @param mask_col A string specifying the name of the column
+#'   containing the mask over valid timepoints.
 #' @return A list of IRF metadata, each containing the following elements:
 #'   - irf_name: The name of the IRF
 #'   - term_name: The name of the term (predictor) in the model
@@ -411,7 +413,8 @@ get_irf_metadata <- function(
         irf_name_map=NULL,
         add_rate=TRUE,
         exclude=c('t_delta', 'mask'),
-        t_delta_col='t_delta'
+        t_delta_col='t_delta',
+        mask_col='mask_col'
 ) {
     if (is.null(sds)) {
         sds <- list()
@@ -452,12 +455,19 @@ get_irf_metadata <- function(
         if (response_param_ix != response_param) {
             next
         }
-        sel <- !(smooth$term %in% exclude)
         term_names <- smooth$term
+        by <- smooth$by
+        sel <- !(by %in% term_names)
+        term_names <- c(term_names, by[sel])
+        sel <- !(term_names %in% exclude)
         if (sum(term_names %in% gf) > 0) { # Skip random effects
             next
         }
-        if (add_rate && length(term_names) == 1 && term_names == t_delta_col) {  # Rate term
+        if (add_rate &&
+                mean(term_names %in% c(t_delta_col, mask_col)) == 1 &&
+                term_names == t_delta_col  &&
+                by == mask_col) {
+            # Rate term
             irf <- list(
                 irf_name='Rate',
                 term_name=t_delta_col,
@@ -554,9 +564,11 @@ plot_irfs <- function(
         xlim=xlim,
         irf_name_map=irf_name_map,
         exclude=exclude,
-        t_delta_col=t_delta_col
+        t_delta_col=t_delta_col,
+        mask_col=mask_col
     )
     data_2d <- list()
+    irf_names <- c()
     for (irf in irfs) {
         plot_data <- get_plot_data(
             model,
@@ -567,6 +579,13 @@ plot_irfs <- function(
             mask_col=mask_col
         )
         plot_data['name'] <- irf$irf_name
+        if (plot_data['name'] %in% irf_names) {
+            stop(paste(
+              'IRF names in plot_irfs() must be unique. Got multiple instances of: ', plot_data['name'],
+              '. Check for bugs in `irf_name_map`.'
+            ))
+        }
+        irf_names <- c(irf_names, plot_data['name'])
         data_2d <- c(data_2d, list(plot_data))
     }
 
@@ -646,9 +665,11 @@ plot_curvature <- function(
         irf_name_map=irf_name_map,
         exclude=exclude,
         add_rate=FALSE,
-        t_delta_col=t_delta_col
+        t_delta_col=t_delta_col,
+        mask_col=mask_col
     )
     data_2d <- list()
+    irf_names <- c()
     for (irf in irfs) {
         term_name <- irf$term_name
         if (!is.null(xlim) && term_name %in% names(xlim)) {
@@ -670,6 +691,13 @@ plot_curvature <- function(
             mask_col=mask_col
         )
         plot_data['name'] <- irf$irf_name
+        if (plot_data['name'] %in% irf_names) {
+            stop(paste(
+              'IRF names in plot_irfs() must be unique. Got multiple instances of: ', plot_data['name'],
+              '. Check for bugs in `irf_name_map`.'
+            ))
+        }
+        irf_names <- c(irf_names, plot_data['name'])
         data_2d <- c(data_2d, list(plot_data))
     }
 
