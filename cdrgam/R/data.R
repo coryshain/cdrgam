@@ -123,6 +123,7 @@ get_cdr_data <- function(
     X <- X[X_ix_sort,]
     Y <- Y[Y_ix_sort,]
 
+    Y <- Y[is.finite(Y[[response_name]]),]
     Y <- apply_filters(Y, filters)
     if (nrow(Y) == 0) {
         stop('No observations remain after filtering')
