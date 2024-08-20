@@ -68,7 +68,7 @@ make_jobs <- function() {
     parser <- optparse::add_option(parser, c('-m', '--mem'), default=8, help='Memory allocation (in GB)')
     parser <- optparse::add_option(parser, c('-n', '--ntasks'), default=2, help='Number of cores ("tasks")')
     parser <- optparse::add_option(parser, c('-e', '--exclude'), help='Comma-delimited list of nodes to exclude')
-    parser <- optparse::add_option(parser, c('-p', '--eval_partition'), default='val',
+    parser <- optparse::add_option(parser, c('-p', '--eval_partition'), default='train,val',
                                    help='Data partition(s) on which to evaluate (comma-delimited)')
     parser <- optparse::add_option(parser, c('-P', '--partition'), help='SLURM partition to use')
     parser <- optparse::add_option(parser, c('-c', '--plot_cfg'), help='Path to additional plot config file')

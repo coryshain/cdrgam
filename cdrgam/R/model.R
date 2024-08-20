@@ -206,7 +206,7 @@ evaluate_cdrnn <- function(
     Y_part <- paste0('Y_', eval_partition)
     X <- read.csv(data_cfg[[X_part]], sep=sep, header=TRUE)
     Y <- read.csv(data_cfg[[Y_part]], sep=sep, header=TRUE)
-    response_name <- all.vars(as.formula(paste('~', model_cfg$response)))
+    response_name <- model_cfg$response
     predictor_names <- get_columns_from_cfg(model_cfg$formula)
     ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
     other_names <- get_others_from_cfg(model_cfg$formula)
@@ -443,7 +443,7 @@ test_cdrgam <- function(
         sink(output_path)
 
         message(rep('=', 80))
-        cat('PERMUTATION TEST')
+        cat('PERMUTATION TEST\n')
         cat(paste('  Base model:       ', path0, '\n'))
         cat(paste('  Alternative model:', path1, '\n'))
         cat(paste('  Partition:        ', eval_partition_, '\n'))
