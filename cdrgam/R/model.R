@@ -8,44 +8,75 @@
 #' @param cfg A configuration object or a string with the path to a YAML file
 #' @param model_name A string with the name of the model to fit
 #' @param fit A logical, whether to fit the model
+#' @param evaluate A logical, whether to evaluate the model
+#' @param plot A logical, whether to visualize the model estimates
+#' @param overwrite A logical, whether to refit and overwrite an existing
+#'    model file
+#' @param clean A logical value indicating whether to clean
+#'   the data from the GAM object before saving, which can
+#'   dramatically reduce disk and memory consumption at the
+#'   loss of some functionality (see `clean_data_from_gam()`
+#'   for details)
+#' @param keep_model A logical value indicating whether to keep
+#'   the main model matrix in the object. If `FALSE`, the
+#'   `model` field of the GAM object will be removed, resulting
+#'   in significant additional savings but breaking some
+#'   native `mgcv` functionality like plotting or prediction
+#'   without supplying a dataset. Ignored if `clean=FALSE`. See
+#'   `clean_data_from_gam()` for details.
 #' @param eval_partition A string or a list of strings with the names of the
 #'    partition(s) (e.g., train, val, test) on which to evaluate
-#' @param plot A logical, whether to visualize the model estimates
+#' @param extra_cols A logical, whether to include all columns from `Y` in
+#'   the output
 #' @param plot_cfg A configuration object or a string with the path to a YAML
 #'    file with additional plot configuration settings (useful for overriding
 #'    defaults used in the main config)
-#' @param overwrite A logical, whether to refit and overwrite an existing
-#'    model file
+#' @param dump_plot_data A logical, whether to save the data used to generate the
+#'   plots to disk as a CSV file. The saved data will be in the same location
+#'   as the plot, and have the same basename (just a different file
+#'   extension). The data will be in long format, with columns for the x-axis,
+#'   y-axis, and any other relevant information, with different subplots
+#'   distinguished as needed by the `color` column. This can be used to
+#'   reload the data into other software environments in order to customize
+#'   the look and contents of plots.
 #' @export
 main <- function(
         cfg,
         model_name,
         fit=TRUE,
-        eval_partition=c('train', 'val'),
+        evaluate=TRUE,
         plot=TRUE,
+        # `fit_cdrgam()` args:
+        overwrite=FALSE,
+        clean=TRUE,
+        keep_model=FALSE,
+        # `evaluate_cdrgam()` args:
+        eval_partition=c('train', 'val'),
+        extra_cols=FALSE,
+        # `plot_cdrgam()` args:
         plot_cfg=NULL,
-        overwrite=FALSE
+        dump_plot_data=FALSE
 ) {
     if (is.string(cfg)) {  # Provided as a filepath
         cfg <- get_cfg(cfg)
     }
     validate_cfg(cfg, model_name)
     if (fit) {
-        fit_cdrnn(cfg, model_name=model_name, overwrite=overwrite)
+        fit_cdrgam(cfg, model_name=model_name, overwrite=overwrite, clean=clean, keep_model=keep_model)
     }
-    if (!is.null(eval_partition)) {
+    if (evaluate) {
         for (eval_partition_ in eval_partition) {
             X_part <- paste0('X_', eval_partition_)
             Y_part <- paste0('Y_', eval_partition_)
             if (!(is.null(cfg$data[[X_part]]) || is.null(cfg$data[[Y_part]]))) {
-                evaluate_cdrnn(cfg, model_name=model_name, eval_partition=eval_partition_)
+                evaluate_cdrgam(cfg, model_name=model_name, eval_partition=eval_partition_, extra_cols=extra_cols)
             } else {
                 message(paste0('No data provided for partition "', eval_partition_, '". Skipping evaluation.'))
             }
         }
     }
     if (plot) {
-        plot_cdrnn(cfg, model_name=model_name, plot_cfg=plot_cfg)
+        plot_cdrgam(cfg, model_name=model_name, plot_cfg=plot_cfg, dump_plot_data=dump_plot_data)
     }
 }
 
@@ -71,7 +102,7 @@ main <- function(
 #'   without supplying a dataset. Ignored if `clean=FALSE`. See
 #'   `clean_data_from_gam()` for details.
 #' @export
-fit_cdrnn <- function(
+fit_cdrgam <- function(
         cfg,
         model_name,
         overwrite=FALSE,
@@ -199,7 +230,7 @@ fit_cdrnn <- function(
 #' @param extra_cols A logical, whether to include all columns from `Y` in
 #'   the output
 #' @export
-evaluate_cdrnn <- function(
+evaluate_cdrgam <- function(
         cfg,
         model_name,
         eval_partition="val",
@@ -289,11 +320,20 @@ evaluate_cdrnn <- function(
 #' @param plot_cfg A configuration object or a string with the path to a YAML
 #'   file with additional plot configuration settings (useful for overriding
 #'   defaults used in the main config)
+#' @param dump_plot_data A logical, whether to save the data used to generate the
+#'   plots to disk as a CSV file. The saved data will be in the same location
+#'   as the plot, and have the same basename (just a different file
+#'   extension). The data will be in long format, with columns for the x-axis,
+#'   y-axis, and any other relevant information, with different subplots
+#'   distinguished as needed by the `color` column. This can be used to
+#'   reload the data into other software environments in order to customize
+#'   the look and contents of plots.
 #' @export
-plot_cdrnn <- function(
+plot_cdrgam <- function(
         cfg,
         model_name,
-        plot_cfg=NULL
+        plot_cfg=NULL,
+        dump_plot_data=FALSE
 ) {
     message(rep('=', 80))
     message('PLOTTING CDR-GAM MODEL')
@@ -345,6 +385,8 @@ plot_cdrnn <- function(
         }
         response_param <- response_params[[i]]
         plot_response_name <- paste(plot_response_name, response_param, sep=', ')
+
+        # IRF plot
         plot_path <- file.path(output_dir, paste0('irf_univariate_', response_name, '_', response_param, '.png'))
         if (is.null(plot_cfg$t_delta_xlim)) {
             xlim <- c(0, 1)
@@ -362,6 +404,13 @@ plot_cdrnn <- function(
             legend=plot_cfg$legend
         )
         ggplot2::ggsave(plot_path, plot=p, width=plot_cfg$width, height=plot_cfg$height, scale=plot_cfg$scale)
+        if (dump_plot_data) {
+            plot_path <- file.path(output_dir, paste0('irf_univariate_', response_name, '_', response_param, '.csv'))
+            plot_data <- p$data
+            write.table(plot_data, plot_path, row.names=FALSE, col.names=TRUE, sep=',')
+        }
+
+        # Curvature plot
         plot_path <- file.path(
             output_dir,
             paste0('curvature_', response_name, '_', response_param, '_at_delay', t_delta_ref, '.png')
@@ -379,6 +428,14 @@ plot_cdrnn <- function(
             legend=plot_cfg$legend
         )
         ggplot2::ggsave(plot_path, plot=p, width=plot_cfg$width, height=plot_cfg$height, scale=plot_cfg$scale)
+        if (dump_plot_data) {
+            plot_path <- file.path(
+                output_dir,
+                paste0('curvature_', response_name, '_', response_param, '_at_delay', t_delta_ref, '.csv')
+            )
+            plot_data <- p$data
+            write.table(plot_data, plot_path, row.names=FALSE, col.names=TRUE, sep=',')
+        }
     }
 }
 

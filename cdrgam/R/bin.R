@@ -6,8 +6,7 @@
 #' where `<cfg>` is the path to a YAML configuration file, `<model_name>` is the
 #' name of the model to fit, and `<option1>`, `<option2>`, etc., are any optional
 #' parameters to `main()`. Note that, due to limitations of command line parsing in R,
-#' the `--eval_partition` option can accept lists, but only as comma-separated (rather
-#' than space-separated) strings.
+#' options that accept lists (e.g., `eval_partition`) must be provided as comma-delimited strings.
 #' @export
 cli <- function() {
     parser <- optparse::OptionParser(
@@ -16,15 +15,23 @@ cli <- function() {
             "Two positional arguments are required: <cfg> and <model_name>."
         )
     )
-    parser <- optparse::add_option(parser, '--fit', default=TRUE, help='Whether to fit the model')
+    # Optional arguments to `main()`
+    parser <- optparse::add_option(parser, '--fit', type='logical', default=TRUE, help='Whether to fit the model')
+    parser <- optparse::add_option(parser, '--evaluate', type='logical', default=TRUE,
+                                   help='Whether to evaluate the model')
+    parser <- optparse::add_option(parser, '--plot', type='logical', default=TRUE, help='Whether to plot the model')
+    parser <- optparse::add_option(parser, '--overwrite', type='logical',
+                                   help='Whether to overwrite an existing model', action='store_true')
+    parser <- optparse::add_option(parser, '--clean', type='logical', help='Whether to clean data from fitted model')
+    parser <- optparse::add_option(parser, '--keep_model',  type='logical',
+                                   help='Whether to save model matrix in fitted model')
     parser <- optparse::add_option(parser, '--eval_partition', default='train,val',
                                    help='Data partition(s) on which to evaluate (comma-delimited)')
-    parser <- optparse::add_option(parser, '--plot', default=TRUE, help='Whether to plot the model')
-    parser <- optparse::add_option(parser, '--plot_cfg', help='Path to the plot configuration file')
-    parser <- optparse::add_option(parser, '--overwrite', help='Whether to overwrite an existing model',
-                                   action='store_true')
-    parser <- optparse::add_option(parser, '--clean', help='Whether to clean data from fitted model')
-    parser <- optparse::add_option(parser, '--keep_model', help='Whether to save model matrix in fitted model')
+    parser <- optparse::add_option(parser, '--extra_cols', type='logical',
+                                   help='Whether to add extra columns from Y to the prediction output')
+    parser <- optparse::add_option(parser, '--plot_cfg', help='Path to additional plot config file')
+    parser <- optparse::add_option(parser, '--dump_plot_data', type='logical',
+                                   help='Whether to save plot data to CSV table')
     cliargs <- optparse::parse_args(parser, positional_arguments=2)
     args <- list(cfg=cliargs$args[[1]], model_name=cliargs$args[[2]])
     for (x in names(cliargs$options)) {
@@ -42,7 +49,9 @@ cli <- function() {
 #'
 #' A command-line utility for generating slurm job scripts from CDR-GAM config
 #' files. The utility generates one job script per model in each config file.
-#' The job scripts are written to the current working directory.
+#' The job scripts are written to the current working directory.  Note that,
+#' due to limitations of command line parsing in R, options that accept lists
+#' (e.g., `eval_partition`) must be provided as comma-delimited strings.
 #'
 #' @export
 make_jobs <- function() {
@@ -56,6 +65,7 @@ make_jobs <- function() {
         '#SBATCH --ntasks=%d',
         sep='\n'
     )
+    slurm_names <- c('time', 'mem', 'ntasks', 'exclude', 'partition')
 
     parser <- optparse::OptionParser(
         description=paste(
@@ -64,48 +74,54 @@ make_jobs <- function() {
             "are required."
         )
     )
-    parser <- optparse::add_option(parser, c('-j', '--jobtype'), default='all',
-                                   help='Type of job to run (all, fit, eval, plot), or comma-delimite list of these')
+    # SLURM options
     parser <- optparse::add_option(parser, c('-t', '--time'), default=24, help='Max runtime (in hours)')
     parser <- optparse::add_option(parser, c('-m', '--mem'), default=8, help='Memory allocation (in GB)')
     parser <- optparse::add_option(parser, c('-n', '--ntasks'), default=2, help='Number of cores ("tasks")')
     parser <- optparse::add_option(parser, c('-e', '--exclude'), help='Comma-delimited list of nodes to exclude')
-    parser <- optparse::add_option(parser, c('-p', '--eval_partition'), default='train,val',
-                                   help='Data partition(s) on which to evaluate (comma-delimited)')
     parser <- optparse::add_option(parser, c('-P', '--partition'), help='SLURM partition to use')
-    parser <- optparse::add_option(parser, c('-c', '--plot_cfg'), help='Path to additional plot config file')
+    # Optional arguments to `main()`
+    parser <- optparse::add_option(parser, '--fit', type='logical', default=TRUE, help='Whether to fit the model')
+    parser <- optparse::add_option(parser, '--evaluate', type='logical', default=TRUE,
+                                   help='Whether to evaluate the model')
+    parser <- optparse::add_option(parser, '--plot', type='logical', default=TRUE, help='Whether to plot the model')
+    parser <- optparse::add_option(parser, '--overwrite', type='logical',
+                                   help='Whether to overwrite an existing model', action='store_true')
     parser <- optparse::add_option(parser, '--clean', type='logical', help='Whether to clean data from fitted model')
     parser <- optparse::add_option(parser, '--keep_model',  type='logical',
                                    help='Whether to save model matrix in fitted model')
+    parser <- optparse::add_option(parser, '--eval_partition', default='train,val',
+                                   help='Data partition(s) on which to evaluate (comma-delimited)')
+    parser <- optparse::add_option(parser, '--extra_cols', type='logical',
+                                   help='Whether to add extra columns from Y to the prediction output')
+    parser <- optparse::add_option(parser, '--plot_cfg', help='Path to additional plot config file')
+    parser <- optparse::add_option(parser, '--dump_plot_data', type='logical',
+                                   help='Whether to save plot data to CSV table')
     cliargs <- optparse::parse_args(parser, positional_arguments=c(1, Inf))
     cfg_paths <- cliargs$args
     options <- cliargs$options
 
-    kwargs <- list()
-    if (options$jobtype == 'all' || options$jobtype == 'fit') {
-        kwargs$fit <- TRUE
-    } else {
-        kwargs$fit <- FALSE
+    kwargs <- options[!(names(options) %in% c(slurm_names, 'help'))]
+    job_name <- character()
+    if (options$fit) {
+        job_name <- c(job_name, 'fit')
     }
-    if (options$jobtype == 'all' || options$jobtype == 'eval') {
-        kwargs$eval_partition <- options$eval_partition
-    } else {
-        kwargs$eval_partition <- ''
+    if (options$evaluate) {
+        job_name <- c(job_name, 'evaluate')
     }
-    if (options$jobtype == 'all' || options$jobtype == 'plot') {
-        kwargs$plot <- TRUE
-    } else {
-        kwargs$plot <- FALSE
+    if (options$plot) {
+        job_name <- c(job_name, 'plot')
     }
+    job_name <- paste(job_name, collapse='-')
 
     for (cfg_path in cfg_paths) {
         cfg <- get_cfg(cfg_path)
         models <- names(cfg$models)
         for (model in models) {
             basename_ <- gsub('\\.yml$', '', basename(cfg_path))
-            job_name <- paste0(basename_, '-', model)
-            job_path <- paste0(job_name, '_slurm.sh', sep='')
-            script <- sprintf(base, job_name, job_name, options$time, options$mem, options$ntasks)
+            job_name_ <- paste0(basename_, '-', model, '_', job_name)
+            job_path <- paste0(job_name_, '_slurm.sh', sep='')
+            script <- sprintf(base, job_name_, job_name_, options$time, options$mem, options$ntasks)
             if (!is.null(options$exclude)) {
                 script <- paste(script, sprintf('#SBATCH --exclude=%s', options$exclude), sep='\n')
             }
@@ -118,12 +134,6 @@ make_jobs <- function() {
                 sprintf('Rscript -e "cdrgam::cli()" %s %s %s', cfg_path, model,
                         paste0('--', paste(names(kwargs), kwargs, sep='='), collapse=' '))
             )
-            if (!is.null(options$clean)) {
-                script <- paste(script, sprintf('--clean %s', options$clean))
-            }
-            if (!is.null(options$keep_model)) {
-                script <- paste(script, sprintf('--keep_model %s', options$keep_model))
-            }
             script <- paste0(script, '\n')
             cat(script, file=job_path)
         }
