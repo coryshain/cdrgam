@@ -120,7 +120,7 @@ make_jobs <- function() {
         for (model in models) {
             basename_ <- gsub('\\.yml$', '', basename(cfg_path))
             job_name_ <- paste0(basename_, '-', model, '_', job_name)
-            job_path <- paste0(job_name_, '_slurm.sh', sep='')
+            job_path <- paste0(job_name_, '.pbs', sep='')
             script <- sprintf(base, job_name_, job_name_, options$time, options$mem, options$ntasks)
             if (!is.null(options$exclude)) {
                 script <- paste(script, sprintf('#SBATCH --exclude=%s', options$exclude), sep='\n')
