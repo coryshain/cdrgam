@@ -253,9 +253,13 @@ evaluate_cdrnn <- function(
 
     if (extra_cols) {
         out <- Y
+        out[['cdrgam.obs']] <- obs
         out[['cdrgam.logLik']] <- lls
     } else {
-        out <- data.frame(cdrgam.logLik=lls)
+        out <- data.frame(
+            cdrgam.obs=obs,
+            cdrgam.logLik=lls
+        )
     }
     write.table(out, output_path, row.names=FALSE, col.names=TRUE, sep=sep)
     return(NULL)
