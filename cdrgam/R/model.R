@@ -234,7 +234,7 @@ evaluate_cdrnn <- function(
     model <- get(load(model_path))
     m <- model$m
     # Use model.matrix to handle responses containing transformations
-    response_name <- model$response
+    response_name <- model_cfg$response
     obs <- model.matrix(as.formula(paste('~', response_name)), data=cdrgam_data)[, response_name]
     message('  Computing likelihoods')
     lls <- evaluate(m, cdrgam_data, obs)$logLik
