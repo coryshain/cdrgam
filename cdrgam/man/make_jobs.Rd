@@ -9,5 +9,7 @@ make_jobs()
 \description{
 A command-line utility for generating slurm job scripts from CDR-GAM config
 files. The utility generates one job script per model in each config file.
-The job scripts are written to the current working directory.
+The job scripts are written to the current working directory.  Note that,
+due to limitations of command line parsing in R, options that accept lists
+(e.g., \code{eval_partition}) must be provided as comma-delimited strings.
 }

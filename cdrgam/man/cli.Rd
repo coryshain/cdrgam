@@ -13,6 +13,5 @@ Wraps the \code{main()} function for use in the command line as follows:
 where \verb{<cfg>} is the path to a YAML configuration file, \verb{<model_name>} is the
 name of the model to fit, and \verb{<option1>}, \verb{<option2>}, etc., are any optional
 parameters to \code{main()}. Note that, due to limitations of command line parsing in R,
-the \code{--eval_partition} option can accept lists, but only as comma-separated (rather
-than space-separated) strings.
+options that accept lists (e.g., \code{eval_partition}) must be provided as comma-delimited strings.
 }

@@ -8,10 +8,15 @@ main(
   cfg,
   model_name,
   fit = TRUE,
-  eval_partition = c("train", "val"),
+  evaluate = TRUE,
   plot = TRUE,
+  overwrite = FALSE,
+  clean = TRUE,
+  keep_model = FALSE,
+  eval_partition = c("train", "val"),
+  extra_cols = FALSE,
   plot_cfg = NULL,
-  overwrite = FALSE
+  dump_plot_data = FALSE
 )
 }
 \arguments{
@@ -21,17 +26,45 @@ main(
 
 \item{fit}{A logical, whether to fit the model}
 
+\item{evaluate}{A logical, whether to evaluate the model}
+
+\item{plot}{A logical, whether to visualize the model estimates}
+
+\item{overwrite}{A logical, whether to refit and overwrite an existing
+model file}
+
+\item{clean}{A logical value indicating whether to clean
+the data from the GAM object before saving, which can
+dramatically reduce disk and memory consumption at the
+loss of some functionality (see \code{clean_data_from_gam()}
+for details)}
+
+\item{keep_model}{A logical value indicating whether to keep
+the main model matrix in the object. If \code{FALSE}, the
+\code{model} field of the GAM object will be removed, resulting
+in significant additional savings but breaking some
+native \code{mgcv} functionality like plotting or prediction
+without supplying a dataset. Ignored if \code{clean=FALSE}. See
+\code{clean_data_from_gam()} for details.}
+
 \item{eval_partition}{A string or a list of strings with the names of the
 partition(s) (e.g., train, val, test) on which to evaluate}
 
-\item{plot}{A logical, whether to visualize the model estimates}
+\item{extra_cols}{A logical, whether to include all columns from \code{Y} in
+the output}
 
 \item{plot_cfg}{A configuration object or a string with the path to a YAML
 file with additional plot configuration settings (useful for overriding
 defaults used in the main config)}
 
-\item{overwrite}{A logical, whether to refit and overwrite an existing
-model file}
+\item{dump_plot_data}{A logical, whether to save the data used to generate the
+plots to disk as a CSV file. The saved data will be in the same location
+as the plot, and have the same basename (just a different file
+extension). The data will be in long format, with columns for the x-axis,
+y-axis, and any other relevant information, with different subplots
+distinguished as needed by the \code{color} column. This can be used to
+reload the data into other software environments in order to customize
+the look and contents of plots.}
 }
 \description{
 A convenience function for fitting, evaluating, and plotting a CDR-GAM model
