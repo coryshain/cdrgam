@@ -18,7 +18,7 @@ cli <- function() {
     )
     parser <- optparse::add_option(parser, '--fit', default=TRUE, help='Whether to fit the model')
     parser <- optparse::add_option(parser, '--eval_partition', default='train,val',
-                                   help='Partition(s) on which to evaluate')
+                                   help='Data partition(s) on which to evaluate (comma-delimited)')
     parser <- optparse::add_option(parser, '--plot', default=TRUE, help='Whether to plot the model')
     parser <- optparse::add_option(parser, '--plot_cfg', help='Path to the plot configuration file')
     parser <- optparse::add_option(parser, '--overwrite', help='Whether to overwrite an existing model',
@@ -69,7 +69,7 @@ make_jobs <- function() {
     parser <- optparse::add_option(parser, c('-n', '--ntasks'), default=2, help='Number of cores ("tasks")')
     parser <- optparse::add_option(parser, c('-e', '--exclude'), help='Comma-delimited list of nodes to exclude')
     parser <- optparse::add_option(parser, c('-p', '--eval_partition'), default='val',
-                                   help='Data partition to use for evaluation')
+                                   help='Data partition(s) on which to evaluate (comma-delimited)')
     parser <- optparse::add_option(parser, c('-P', '--partition'), help='SLURM partition to use')
     parser <- optparse::add_option(parser, c('-c', '--plot_cfg'), help='Path to additional plot config file')
     cliargs <- optparse::parse_args(parser, positional_arguments=c(1, Inf))
@@ -116,4 +116,46 @@ make_jobs <- function() {
             cat(script, file=job_path)
         }
     }
+}
+
+#' Command-line utility for statistically comparing two CDR-GAM models
+#'
+#' A command-line utility for statistically comparing two CDR-GAM models. The
+#' utility wraps the `test_cdrgam()` function for use in the command line as
+#' follows:
+#'    `Rscript -e "cdrgam::test()" <cfg0> <model0> <model1> --<option1> <value1> --<option2> <value2> ...`
+#' where `<cfg0>` is the path to the first model configuration file, `<model0>`
+#' is the name of the first model, `<model1>` is the name of the second model, and
+#' `<option1>`, `<option2>`, etc., are any optional parameters to `test_cdrgam()`.
+#' Note that, due to limitations of command line parsing in R, the `--eval_partition`
+#' option can accept lists, but only as comma-separated (rather than space-separated) strings.
+#' @export
+test <- function() {
+    parser <- optparse::OptionParser(
+        description=paste(
+            "Command-line utility for statistically comparing two CDR-GAM models.",
+            "Three positional arguments are required: <cfg0>, <model0>, and <model1>."
+        )
+    )
+    parser <- optparse::add_option(parser, '--cfg1',
+                                   help='Path to the second model configuration file (if distinct from cfg1)')
+    parser <- optparse::add_option(parser, '--eval_partition', default='val',
+                                   help='Data partition(s) on which to evaluate (comma-delimited)')
+    parser <- optparse::add_option(parser, '--statistic', default='logLik', help='Statistic to test')
+    parser <- optparse::add_option(parser, '--output_dir', help='Path to output directory')
+    parser <- optparse::add_option(parser, '--n_iter', help='Number of resampling iterations to run')
+    parser <- optparse::add_option(parser, '--n_tails', help='Number of tails in the test')
+    parser <- optparse::add_option(parser, '--nested', help='Whether model1 is to be treated as nested inside model0',
+                                   action='store_true')
+    cliargs <- optparse::parse_args(parser, positional_arguments=3)
+    args <- list(cfg0=cliargs$args[[1]], model_name0=cliargs$args[[2]], model_name1=cliargs$args[[3]])
+    for (x in names(cliargs$options)) {
+        if (x != 'help' && !is.null(cliargs$options[[x]])) {
+            args[[x]] <- cliargs$options[[x]]
+            if (x == 'eval_partition') {
+                args[[x]] <- strsplit(cliargs$options[[x]], ',')[[1]]
+            }
+        }
+    }
+    do.call(test_cdrgam, args)
 }

@@ -391,7 +391,7 @@ get_time_windows <- function(
     epsilon <- 1.1920929e-07
 
     while (i <= n) {
-        if (verbose && (i == 1 || i %% 1000 == 999 || i == n)) {
+        if (verbose && (i == 1 || i %% 1000 == 0 || i == n)) {
             report(paste("\r   ", i, "/", n))
         }
 

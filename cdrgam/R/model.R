@@ -363,6 +363,96 @@ plot_cdrnn <- function(
     }
 }
 
+#' Perform a paired permutation test of difference between two models
+#'
+#' Perform a paired permutation test of the difference between two models
+#' based on a statistic (e.g., log-likelihood) computed on a partition of the
+#' data. The function will load the data, perform the test, and save the
+#' results to disk.
+#'
+#' @param cfg0 A configuration object or a string with the path to a YAML file
+#' @param model_name0 A string with the name of the base model
+#' @param model_name1 A string with the name of the alternative model
+#' @param cfg1 A configuration object or a string with the path to a YAML file.
+#'   If NULL, `cfg0` will be used in its place.
+#' @param eval_partition A string or a list of strings with the names of the
+#'   partition(s) (e.g., train, val, test) on which to evaluate
+#' @param statistic A string with the name of the statistic to use
+#' @param output_dir A string with the path to the output directory
+#' @param ... Additional arguments to pass to the `permutation_test()` function
+#' @export
+test_cdrgam <- function(
+    cfg0,
+    model_name0,
+    model_name1,
+    cfg1=NULL,
+    eval_partition='val',
+    statistic='logLik',
+    output_dir=NULL,
+    ...
+) {
+    if (is.string(cfg0)) {  # Provided as a filepath
+        cfg0 <- get_cfg(cfg0)
+    }
+    if (is.string(cfg1)) {  # Provided as a filepath
+        cfg1 <- get_cfg(cfg1)
+    } else if (is.null(cfg1)) {
+        cfg1 <- cfg0
+    }
+    validate_cfg(cfg0, model_name0)
+    validate_cfg(cfg1, model_name1)
+    if (is.null(output_dir)) {
+        output_dir <- file.path(cfg0$output_dir, 'signif')
+    }
+    if (!dir.exists(output_dir)) {
+        dir.create(output_dir, recursive=TRUE)
+    }
+
+    for (eval_partition_ in eval_partition) {
+        path0 <- file.path(cfg0$output_dir, model_name0, paste0('output_', eval_partition_, '.csv'))
+        path1 <- file.path(cfg1$output_dir, model_name1, paste0('output_', eval_partition_, '.csv'))
+
+        df0 <- read.csv(path0, header=TRUE)
+        df1 <- read.csv(path1, header=TRUE)
+
+        col <- paste('cdrgam', statistic, sep='.')
+
+        if (!(col %in% names(df0) && col %in% names(df1))) {
+            stop(paste0('Column "', col, '" not found in one or more inputs'))
+        }
+
+        a0 <- df0[[col]]
+        a1 <- df1[[col]]
+
+        result <- permutation_test(a0, a1, statistic=statistic, ...)
+
+        obs_diff <- result$observed_difference
+        p_value <- result$p_value
+
+        message(rep('=', 80))
+        message('PERMUTATION TEST')
+        message(paste('  Base model:       ', path0))
+        message(paste('  Alternative model:', path1))
+        message(paste('  Partition:        ', eval_partition_))
+        message(paste('  Difference:       ', obs_diff))
+        message(paste('  P-value:          ', p_value))
+
+        output_path <- file.path(
+            output_dir, paste0('signif_', model_name0, '_vs_', model_name1, '_', eval_partition_, '.txt')
+        )
+        sink(output_path)
+
+        message(rep('=', 80))
+        cat('PERMUTATION TEST')
+        cat(paste('  Base model:       ', path0, '\n'))
+        cat(paste('  Alternative model:', path1, '\n'))
+        cat(paste('  Partition:        ', eval_partition_, '\n'))
+        cat(paste('  Difference:       ', obs_diff, '\n'))
+        cat(paste('  P-value:          ', p_value, '\n'))
+        sink()
+    }
+}
+
 #' Validate a CDR-GAM configuration
 #'
 #' Validate a CDR-GAM configuration object to ensure that it contains the
