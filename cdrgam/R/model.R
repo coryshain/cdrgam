@@ -151,7 +151,7 @@ fit_cdrnn <- function(
         )
     } else {
         message('  Model already exists, skipping fitting and reloading')
-        model <- readRDS(model_path)
+        model <- load.cdrgam(model_path)
         m <- model$m
         model <- list(
             m=m,
@@ -164,7 +164,7 @@ fit_cdrnn <- function(
         )
     }
     message('  Saving')
-    saveRDS(model, file=model_path, compress=FALSE)
+    save.cdrgam(model, file=model_path)
 
     print(summary(m))
     sink(summary_path)
@@ -231,7 +231,7 @@ evaluate_cdrnn <- function(
     eval_path <- file.path(output_dir, paste0('eval_', eval_partition, '.txt'))
 
     message('  Loading model')
-    model <- readRDS(model_path)
+    model <- load.cdrgam(model_path)
     m <- model$m
     # Use model.matrix to handle responses containing transformations
     response_name <- model_cfg$response
@@ -309,7 +309,7 @@ plot_cdrnn <- function(
 
     output_dir <- file.path(cfg$output_dir, model_name)
     message('  Loading model')
-    model <- readRDS(file.path(output_dir, 'model.rds'))
+    model <- load.cdrgam(file.path(output_dir, 'model.rds'))
     m <- model$m
     means <- model$means
     sds <- model$sds
