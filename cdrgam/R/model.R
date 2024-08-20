@@ -206,7 +206,7 @@ evaluate_cdrnn <- function(
     Y_part <- paste0('Y_', eval_partition)
     X <- read.csv(data_cfg[[X_part]], sep=sep, header=TRUE)
     Y <- read.csv(data_cfg[[Y_part]], sep=sep, header=TRUE)
-    response_name <- model_cfg$response
+    response_name <- all.vars(as.formula(paste('~', model_cfg$response)))
     predictor_names <- get_columns_from_cfg(model_cfg$formula)
     ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
     other_names <- get_others_from_cfg(model_cfg$formula)
@@ -234,6 +234,7 @@ evaluate_cdrnn <- function(
     model <- get(load(model_path))
     m <- model$m
     # Use model.matrix to handle responses containing transformations
+    response_name <- model$response
     obs <- model.matrix(as.formula(paste('~', response_name)), data=cdrgam_data)[, response_name]
     message('  Computing likelihoods')
     lls <- evaluate(m, cdrgam_data, obs)$logLik
