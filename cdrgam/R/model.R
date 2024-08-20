@@ -78,11 +78,13 @@ fit_cdrnn <- function(
 
     # Get paths
     output_dir <- file.path(cfg$output_dir, model_name)
+    config_path <- file.path(cfg$output_dir, 'config.yml')
     model_path <- file.path(output_dir, 'model.RData')
     summary_path <- file.path(output_dir, 'summary.txt')
     if (!dir.exists(output_dir)) {
         dir.create(output_dir, recursive=TRUE)
     }
+    yaml::write_yaml(cfg, file=config_path)
 
     # Load data
     X <- data_cfg$X_train
