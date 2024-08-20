@@ -653,10 +653,18 @@ get_formula_string <- function(
             preds <- paste(smooth_in, ranef_in, sep=', ')
         }
         by_in <- paste(by_in, collapse='*')
+        n_bs_arg <- length(bs_arg)
         bs_arg <- paste(bs_arg, collapse=', ')
+        if (n_bs_arg > 1) {
+            bs_arg <- paste0('c(', bs_arg, ')')
+        }
+        n_k_arg <- length(k_arg)
         k_arg <- paste(k_arg, collapse=', ')
+        if (n_k_arg > 1) {
+            k_arg <- paste0('c(', k_arg, ')')
+        }
         pred_f <- paste0(
-            'te(', preds, ', k=c(', k_arg, '), bs=c(', bs_arg, '), by=', by_in, ')'
+            'te(', preds, ', k=', k_arg, ', bs=', bs_arg, ', by=', by_in, ')'
         )
         return(pred_f)
     }
