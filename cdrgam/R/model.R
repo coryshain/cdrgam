@@ -58,11 +58,25 @@ main <- function(
 #' @param cfg A configuration object or a string with the path to a YAML file
 #' @param model_name A string with the name of the model to fit
 #' @param overwrite A logical, whether to overwrite an existing model
+#' @param clean A logical value indicating whether to clean
+#'   the data from the GAM object before saving, which can
+#'   dramatically reduce disk and memory consumption at the
+#'   loss of some functionality (see `clean_data_from_gam()`
+#'   for details)
+#' @param keep_model A logical value indicating whether to keep
+#'   the main model matrix in the object. If `FALSE`, the
+#'   `model` field of the GAM object will be removed, resulting
+#'   in significant additional savings but breaking some
+#'   native `mgcv` functionality like plotting or prediction
+#'   without supplying a dataset. Ignored if `clean=FALSE`. See
+#'   `clean_data_from_gam()` for details.
 #' @export
 fit_cdrnn <- function(
         cfg,
         model_name,
-        overwrite=FALSE
+        overwrite=FALSE,
+        clean=TRUE,
+        keep_model=FALSE
 ) {
     message(rep('=', 80))
     message('FITTING CDR-GAM MODEL')
@@ -164,7 +178,7 @@ fit_cdrnn <- function(
         )
     }
     message('  Saving')
-    save.cdrgam(model, file=model_path)
+    save.cdrgam(model, file=model_path, clean=clean, keep_model=keep_model)
 
     print(summary(m))
     sink(summary_path)

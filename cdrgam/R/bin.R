@@ -23,10 +23,12 @@ cli <- function() {
     parser <- optparse::add_option(parser, '--plot_cfg', help='Path to the plot configuration file')
     parser <- optparse::add_option(parser, '--overwrite', help='Whether to overwrite an existing model',
                                    action='store_true')
+    parser <- optparse::add_option(parser, '--clean', help='Whether to clean data from fitted model')
+    parser <- optparse::add_option(parser, '--keep_model', help='Whether to save model matrix in fitted model')
     cliargs <- optparse::parse_args(parser, positional_arguments=2)
     args <- list(cfg=cliargs$args[[1]], model_name=cliargs$args[[2]])
     for (x in names(cliargs$options)) {
-        if (x != 'help') {
+        if (x != 'help' && !is.null(cliargs$options[[x]])) {
             args[[x]] <- cliargs$options[[x]]
             if (x == 'eval_partition') {
                 args[[x]] <- strsplit(cliargs$options[[x]], ',')[[1]]
@@ -72,6 +74,9 @@ make_jobs <- function() {
                                    help='Data partition(s) on which to evaluate (comma-delimited)')
     parser <- optparse::add_option(parser, c('-P', '--partition'), help='SLURM partition to use')
     parser <- optparse::add_option(parser, c('-c', '--plot_cfg'), help='Path to additional plot config file')
+    parser <- optparse::add_option(parser, '--clean', type='logical', help='Whether to clean data from fitted model')
+    parser <- optparse::add_option(parser, '--keep_model',  type='logical',
+                                   help='Whether to save model matrix in fitted model')
     cliargs <- optparse::parse_args(parser, positional_arguments=c(1, Inf))
     cfg_paths <- cliargs$args
     options <- cliargs$options
@@ -110,9 +115,16 @@ make_jobs <- function() {
             script <- paste0(script, '\n\n')
             script <- paste0(
                 script,
-                sprintf('Rscript -e "cdrgam::cli()" %s %s %s\n', cfg_path, model,
+                sprintf('Rscript -e "cdrgam::cli()" %s %s %s', cfg_path, model,
                         paste0('--', paste(names(kwargs), kwargs, sep='='), collapse=' '))
             )
+            if (!is.null(options$clean)) {
+                script <- paste(script, sprintf('--clean %s', options$clean))
+            }
+            if (!is.null(options$keep_model)) {
+                script <- paste(script, sprintf('--keep_model %s', options$keep_model))
+            }
+            script <- paste0(script, '\n')
             cat(script, file=job_path)
         }
     }
