@@ -874,7 +874,7 @@ get_formula_string <- function(
         }
         if (!is.null(ran_gf)) {
             inputs_ <- c(inputs_, ran_gf)
-            bs_ <- c(bx_, '"re"')
+            bs_ <- c(bs_, '"re"')
         }
         n_k <- length(k_)
         n_bs <- length(bs_)
