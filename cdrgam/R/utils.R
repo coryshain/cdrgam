@@ -109,17 +109,51 @@ load.cdrgam <- function(file, ...) {
 #'   native `mgcv` functionality like plotting or prediction
 #'   without supplying a dataset.
 #' @export
-clean_data_from_gam <- function(m, keep_model=FALSE) {
+clean_data_from_gam <- function(m, keep_model=FALSE, keep_dH=FALSE) {
+    data_keys <- c('X', 'Xm', 'data', 'dat', 'ind')
     # Remove main model matrix copies
     m$call$data <- NULL
     if (!keep_model) {
         m$model <- NULL
     }
+    if (!keep_dH) {
+        m$dH <- NULL
+    }
     # Remove smooth model matrices
     for (s_ix in seq_along(m$smooth)) {
         m$smooth[[s_ix]]$ind <- NULL
         for (m_ix in seq_along(m$smooth[[s_ix]]$margin)) {
-            m$smooth[[s_ix]]$margin[[m_ix]]$X <- NULL
+            for (data_key in data_keys) {
+                m$smooth[[s_ix]]$margin[[m_ix]][[data_key]] <- NULL
+            }
+            env <- environment(m$smooth[[s_ix]]$margin[[m_ix]]$form)
+            while (!is.null(env)) {
+                data_keys_ <- data_keys[data_keys %in% names(env)]
+                for (data_key in data_keys_) {
+                    rm(list=data_key, envir=env)
+                }
+                for (subkey in c('dk', 'object')) {
+                    if (subkey %in% names(env)) {
+                        data_keys_ <- data_keys[data_keys %in% names(env[[subkey]])]
+                        for (data_key in data_keys_) {
+                            env[[subkey]][[data_key]] <- NULL
+                        }
+                        if (subkey == 'object' && 'margin' %in% names(env[[subkey]])) {
+                            for (m_ix_ in seq_along(env[[subkey]][['margin']])) {
+                                data_keys_ <- data_keys[data_keys %in% names(env[[subkey]][['margin']][[m_ix_]])]
+                                for (data_key in data_keys_) {
+                                    env[[subkey]][['margin']][[m_ix_]][[data_key]] <- NULL
+                                }
+                            }
+                        }
+                    }
+                }
+                if ('.GenericCallEnv' %in% names(env)) {
+                    env <- env$.GenericCallEnv
+                } else {
+                    env <- NULL
+                }
+            }
         }
     }
     return(m)
