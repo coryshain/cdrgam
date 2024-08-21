@@ -784,7 +784,6 @@ get_formula_string <- function(
     k <- expand_arg(x=k, variables=irfs, argname='k', type='numeric')
     k_t <- expand_arg(x=k_t, variables=irfs, argname='k_t', type='numeric', add_t_delta=TRUE)
     bs <- expand_arg(x=bs, variables=irfs, argname='bs', type='character')
-    print(bs)
     bs_t <- expand_arg(x=bs_t, variables=irfs, argname='bs_t', type='character', add_t_delta=TRUE)
 
     # Helper function to simplify per-predictor code
