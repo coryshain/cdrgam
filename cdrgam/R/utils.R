@@ -116,7 +116,7 @@ load.cdrgam <- function(file, ...) {
 #'   tested.
 #' @export
 clean_data_from_gam <- function(m, keep_model=FALSE, keep_dH=FALSE) {
-    data_keys <- c('X', 'Xm', 'data', 'dat', 'ind')
+    data_keys <- c('X', 'Xm', 'data', 'ind')
     # Remove main model matrix copies
     m$call$data <- NULL
     if (!keep_model) {
