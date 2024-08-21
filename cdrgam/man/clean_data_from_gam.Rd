@@ -4,7 +4,7 @@
 \alias{clean_data_from_gam}
 \title{Clean data from a GAM object}
 \usage{
-clean_data_from_gam(m, keep_model = FALSE)
+clean_data_from_gam(m, keep_model = FALSE, keep_dH = FALSE)
 }
 \arguments{
 \item{m}{A GAM object}
@@ -15,6 +15,13 @@ the main model matrix in the object. If \code{FALSE}, the
 in significant additional savings but breaking some
 native \code{mgcv} functionality like plotting or prediction
 without supplying a dataset.}
+
+\item{keep_dH}{A logical value indicating whether to keep
+the \code{dH} field of the GAM object (derivates of the
+Hessian, an artifact of fitting that can be quite large).
+Functionality for \code{cdrgam} is unaffected by this, but
+impacts on native \code{mgcv} functionality are not fully
+tested.}
 }
 \description{
 Clean data from a GAM object by removing model matrices

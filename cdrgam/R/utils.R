@@ -108,6 +108,12 @@ load.cdrgam <- function(file, ...) {
 #'   in significant additional savings but breaking some
 #'   native `mgcv` functionality like plotting or prediction
 #'   without supplying a dataset.
+#' @param keep_dH A logical value indicating whether to keep
+#'   the `dH` field of the GAM object (derivates of the
+#'   Hessian, an artifact of fitting that can be quite large).
+#'   Functionality for `cdrgam` is unaffected by this, but
+#'   impacts on native `mgcv` functionality are not fully
+#'   tested.
 #' @export
 clean_data_from_gam <- function(m, keep_model=FALSE, keep_dH=FALSE) {
     data_keys <- c('X', 'Xm', 'data', 'dat', 'ind')
