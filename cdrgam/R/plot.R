@@ -111,9 +111,9 @@ get_plot_data <- function(
         if (!(term_name %in% names(X_ref))) {
             if (is.factor(var.summary)) {
                 if (get_cdr_population_code() %in% levels(var.summary)) {  # Random grouping factor
-                    X_ref[[term_name]] <- get_cdr_population_code()
+                    X_ref[[term_name]] <- factor(get_cdr_population_code(), levels=levels(var.summary))
                 } else {  # Other factor
-                    X_ref[[term_name]] <- levels(var.summary)[1]
+                    X_ref[[term_name]] <- levels(var.summary)[[1]]
                 }
             } else if (term_name == mask_col) {  # Mask, unused for plotting
                 X_ref[[term_name]] <- 1
@@ -456,12 +456,13 @@ get_irf_metadata <- function(
             next
         }
         is.irf <- t_delta_col %in% smooth$term
+	has.factor <- sum(factors %in% smooth$term) > 0
         term_names <- strsplit(smooth$by, split=' * ', fixed=TRUE)[[1]]
         sel <- !(term_names %in% exclude)
         if (sum(term_names %in% gf) > 0) { # Skip random effects
             next
         }
-        if (is.irf) {
+        if (is.irf && !has.factor) {
             if (mean(term_names %in% c(mask_col)) == 1) {
                 if (add_rate){
                     # Rate term
@@ -504,7 +505,7 @@ get_irf_metadata <- function(
                     X_ref=X_ref,
                     xlim=xlim
                 )
-                irfs <- c(irfs, list(irf))
+		irfs <- c(irfs, list(irf))
             }
         }
     }
