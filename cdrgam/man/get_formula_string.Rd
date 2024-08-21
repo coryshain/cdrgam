@@ -14,7 +14,7 @@ get_formula_string(
   use_rate = TRUE,
   ran_gf = NULL,
   others = NULL,
-  stationary = FALSE,
+  stationary = TRUE,
   t_delta_col = "t_delta",
   mask_col = "mask",
   time_col = "time"
