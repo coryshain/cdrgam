@@ -7,10 +7,10 @@ GLOBAL.CDRGAM <- list(
         t_delta_cutoff=NULL
     ),
     formula=list(
-        k_t=10,
-        k=10,
+        k_t=20,
+        k=5,
         bs_t='cr',
-        bs='cr'
+        bs=NULL
     ),
     model=list(
         gamma=1,

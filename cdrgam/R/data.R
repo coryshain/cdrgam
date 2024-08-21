@@ -100,6 +100,7 @@ get_cdr_data <- function(
         mask_col='mask',
         verbose=TRUE
 ) {
+    predictor_names <- predictor_names[!(predictor_names %in% c(time_col, mask_col))]
     if (verbose) {
         message('  Loading data')
     }

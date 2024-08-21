@@ -455,30 +455,36 @@ get_irf_metadata <- function(
         if (response_param_ix != response_param) {
             next
         }
-        term_names <- smooth$term
-        by <- smooth$by
-        sel <- !(by %in% term_names)
-        term_names <- c(term_names, by[sel])
+        is.irf <- t_delta_col %in% smooth$term
+        term_names <- strsplit(smooth$by, split=' * ', fixed=TRUE)[[1]]
         sel <- !(term_names %in% exclude)
         if (sum(term_names %in% gf) > 0) { # Skip random effects
             next
         }
-        if (add_rate &&
-                mean(term_names %in% c(t_delta_col, mask_col)) == 1 &&
-                term_names == t_delta_col  &&
-                by == mask_col) {
-            # Rate term
-            irf <- list(
-                irf_name='Rate',
-                term_name=t_delta_col,
-                smooth_name=smooth_name,
-                X_ref=means,
-                xlim=xlim
-            )
-            irfs <- c(irfs, list(irf))
-        } else if (t_delta_col %in% term_names) {
-            term_names <- term_names[sel]
-            for (term_name in term_names) {
+        if (is.irf) {
+            if (mean(term_names %in% c(mask_col)) == 1) {
+                if (add_rate){
+                    # Rate term
+                    irf <- list(
+                        irf_name='Rate',
+                        term_name=t_delta_col,
+                        smooth_name=smooth_name,
+                        X_ref=means,
+                        xlim=xlim
+                    )
+                    irfs <- c(irfs, list(irf))
+                }
+            } else {
+                term_names <- term_names[sel]
+                deltas <- list()
+                for (term_name in term_names) {
+                    if (term_name %in% names(sds)) {
+                        deltas[[term_name]] <- sds[[term_name]]
+                    } else {
+                        deltas[[term_name]] <- 1
+                    }
+                }
+                term_name <- paste(term_names, collapse=':')
                 irf_name <- paste0(term_name, ' | ', smooth_name)
                 for (irf_key in irf_keys) {
                     if (grepl(irf_key, irf_name, fixed=TRUE)) {
@@ -486,13 +492,10 @@ get_irf_metadata <- function(
                         break
                     }
                 }
-                if (term_name %in% names(sds)) {
-                    delta <- sds[[term_name]]
-                } else {
-                    delta <- 1
-                }
                 X_ref <- means
-                X_ref[[term_name]] <- X_ref[[term_name]] + delta
+                for (key in names(deltas)) {
+                    X_ref[[key]] <- X_ref[[key]] + deltas[[key]]
+                }
 
                 irf <- list(
                     irf_name=irf_name,
@@ -672,6 +675,10 @@ plot_curvature <- function(
     irf_names <- c()
     for (irf in irfs) {
         term_name <- irf$term_name
+        if (grepl(':', term_name, fixed=TRUE)) {
+            # Interaction term, nonsensical, skip
+            next
+        }
         if (!is.null(xlim) && term_name %in% names(xlim)) {
             irf$xlim <- xlim[[term_name]]
         } else if (!is.null(quantiles) && term_name %in% names(quantiles)) {
