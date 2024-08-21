@@ -808,16 +808,19 @@ get_formula_string <- function(
             inputs <- c(inputs, time_col)
         }
         for (input in inputs) {  # Allows nesting, permitting multiple preds to interact
-            if (!is.null(bs[[input]])) {
+            if (!is.null(bs[[input]]) || (!stationary && input == time_col)) {
+                bs_ <- bs[[input]]
+                if (is.null(bs_)) {
+                    bs_ <- 'cr'
+                }
                 smooth_in <- c(smooth_in, input)
-                bs_arg <- c(bs_arg, paste0('"', bs[[input]], '"'))
+                bs_arg <- c(bs_arg, paste0('"', bs_, '"'))
                 k_arg <- c(k_arg, as.character(k[[input]]))
             }
         }
         for (impulse in impulses) {  # Allows nesting, permitting multiple preds to interact
             by_in <- c(by_in, impulse)
         }
-        # bs_arg <- c(bs_arg, rep('"re"', length(impulses))) # Add re bases for linear terms
         if (!(is.null(ran_gf))) {
             # Add random grouping factor
             for (ran_gf_ in ran_gf) {  # Allows nesting, for crossed random grouping factors
@@ -832,11 +835,7 @@ get_formula_string <- function(
         } else {
             preds <- paste(smooth_in, ranef_in, sep=', ')
         }
-        # n_by_in <- length(by_in)
         by_in <- paste(by_in, collapse='*')
-        # if (n_by_in > 1) {
-        #     by_in <- paste0('I(', by_in, ')')
-        # }
         n_bs_arg <- length(bs_arg)
         bs_arg <- paste(bs_arg, collapse=', ')
         if (n_bs_arg > 1) {
@@ -867,10 +866,15 @@ get_formula_string <- function(
         inputs_ <- t_delta_col
         k_ <- k_t[[t_delta_col]]
         bs_ <- paste0('"', bs_t[[t_delta_col]], '"')
-        if (!stationary && !is.null(bs[[time_col]])) {
+        if (!stationary) {
+            if (is.null(bs[[time_col]])) {
+                bs__ <- 'cr'
+            } else {
+                bs__ <- bs[[time_col]]
+            }
             inputs_ <- c(inputs_, time_col)
             k_ <- c(k_, k[[time_col]])
-            bs_ <- c(bs_, paste0('"', bs[[time_col]], '"'))
+            bs_ <- c(bs_, paste0('"', bs__, '"'))
         }
         if (!is.null(ran_gf)) {
             inputs_ <- c(inputs_, ran_gf)
