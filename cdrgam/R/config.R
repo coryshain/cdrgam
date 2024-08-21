@@ -18,7 +18,8 @@ get_cfg <- function(path) {
     }
 
     if (!('output_dir' %in% names(cfg))) {
-        cfg$output_dir <- 'cdrgam_results'
+        output_dir <- file.path('cdrgam_results', gsub('.yml', '', basename(path), fixed=TRUE))
+        cfg$output_dir <- output_dir
     }
 
     keys <- names(defaults$data)

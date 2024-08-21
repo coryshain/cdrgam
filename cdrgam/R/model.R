@@ -860,18 +860,34 @@ get_formula_string <- function(
         } else {
             f <- c(f, paste0('te(', ran_gf, ', bs="re", by=', mask_col, ')'))
         }
+    } else if (is.null(ran_gf)) {
+        f <- c(f, '0')
     }
     if (use_rate) {
-        if (is.null(ran_gf)) {
-            f <- c(f, paste0(
-                'te(',t_delta_col, ', k=', k_t[[t_delta_col]], ', bs="', bs_t[[t_delta_col]], '", by=', mask_col, ')'
-            ))
-        } else {
-            f <- c(f, paste0(
-                'te(', t_delta_col, ', ', ran_gf, ', k=', k_t[[t_delta_col]],
-                ', bs=c("', bs_t[[t_delta_col]], '", "re"), by=', mask_col, ')'
-            ))
+        inputs_ <- t_delta_col
+        k_ <- k_t[[t_delta_col]]
+        bs_ <- paste0('"', bs_t[[t_delta_col]], '"')
+        if (!stationary && !is.null(bs[[time_col]])) {
+            inputs_ <- c(inputs_, time_col)
+            k_ <- c(k_, k[[time_col]])
+            bs_ <- c(bs_, paste0('"', bs[[time_col]], '"'))
         }
+        if (!is.null(ran_gf)) {
+            inputs_ <- c(inputs_, ran_gf)
+            bs_ <- c(bx_, '"re"')
+        }
+        n_k <- length(k_)
+        n_bs <- length(bs_)
+        inputs_ <- paste(inputs_, collapse=', ')
+        k_ <- paste(k_, collapse=', ')
+        bs_ <- paste(bs_, collapse=', ')
+        if (n_k > 1) {
+            k_ <- paste0('c(', k_, ')')
+        }
+        if (n_bs > 1) {
+            bs_ <- paste0('c(', bs_, ')')
+        }
+        f <- c(f, paste0('te(', inputs_, ', k=', k_, ', bs=', bs_, ', by=', mask_col, ')'))
     }
     for (irf in irfs) {
         if (!is.null(names(irf)) && names(irf) == c('inputs', 'impulses')) {
