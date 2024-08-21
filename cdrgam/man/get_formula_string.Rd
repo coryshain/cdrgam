@@ -14,8 +14,10 @@ get_formula_string(
   use_rate = TRUE,
   ran_gf = NULL,
   others = NULL,
+  stationary = FALSE,
   t_delta_col = "t_delta",
-  mask_col = "mask"
+  mask_col = "mask",
+  time_col = "time"
 )
 }
 \arguments{

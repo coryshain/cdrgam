@@ -211,9 +211,10 @@ fit_cdrgam <- function(
     message('  Saving')
     save.cdrgam(model, file=model_path, clean=clean, keep_model=keep_model)
 
-    print(summary(m))
+    summary_ <- summary(m)
+    print(summary_)
     sink(summary_path)
-    print(summary(m))
+    print(summary_)
     sink()
 }
 
@@ -730,8 +731,10 @@ get_formula_string <- function(
         use_rate=TRUE,
         ran_gf=NULL,
         others=NULL,
+        stationary=FALSE,
         t_delta_col='t_delta',
-        mask_col='mask'
+        mask_col='mask',
+        time_col='time'
 ) {
     defaults <- list(
         k=5,
@@ -749,12 +752,19 @@ get_formula_string <- function(
             default <- x
             x <- list()
         } else { # By assumption, named list of values
-            default <- defaults[[argname]]
+            if ('!!!DEFAULT!!!' %in% names(x)) {
+                default <- x[['!!!DEFAULT!!!']]
+            } else {
+                default <- defaults[[argname]]
+            }
         }
         if (is.null(variables)) { # No predictors to expand to
             variables <- list()
         }
         x_ <- list()
+        if (!stationary) {
+            variables <- c(variables, time_col)
+        }
         for (variable in variables) {
             for (variable_ in variable) {  # Allows nesting
                 sel <- variable_ %in% names(x)
@@ -794,9 +804,11 @@ get_formula_string <- function(
         if (is.null(inputs)) {  # Assume identity between IRF inputs and impulses
             inputs <- impulses
         }
+        if (!stationary) {
+            inputs <- c(inputs, time_col)
+        }
         for (input in inputs) {  # Allows nesting, permitting multiple preds to interact
             if (!is.null(bs[[input]])) {
-                # smooth_in <- c(smooth_in, paste0('I(', input, ')'))
                 smooth_in <- c(smooth_in, input)
                 bs_arg <- c(bs_arg, paste0('"', bs[[input]], '"'))
                 k_arg <- c(k_arg, as.character(k[[input]]))
@@ -820,7 +832,11 @@ get_formula_string <- function(
         } else {
             preds <- paste(smooth_in, ranef_in, sep=', ')
         }
+        # n_by_in <- length(by_in)
         by_in <- paste(by_in, collapse='*')
+        # if (n_by_in > 1) {
+        #     by_in <- paste0('I(', by_in, ')')
+        # }
         n_bs_arg <- length(bs_arg)
         bs_arg <- paste(bs_arg, collapse=', ')
         if (n_bs_arg > 1) {
