@@ -146,14 +146,14 @@ get_cdr_data <- function(
                  ranef_ <- Y[[ranef_name]]
                  ranef <- c(ranef, ranef_)
             }
-            if (is.null(ranef_levels)) {
+            if (is.null(ranef_levels[[ranef_name]])) {
                 ranef <- as.factor(ranef)
                 if (get_cdr_population_code() %in% levels(ranef)) {
                     stop(paste0('Reserved keyword ', get_cdr_population_code(),
                                 ' found as a level of random effect ', ranef_name, '. Please rename.'))
                 }
             } else {
-                ranef <- factor(ranef, levels=ranef_levels)
+                ranef <- factor(ranef, levels=ranef_levels[[ranef_name]])
             }
             dim(ranef) <- c(n, w)
             if (!(get_cdr_population_code() %in% levels(ranef))) {

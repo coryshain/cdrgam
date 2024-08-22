@@ -246,6 +246,16 @@ evaluate_cdrgam <- function(
     data_cfg <- cfg$data
     model_cfg <- cfg$models[[model_name]]
 
+    # Paths
+    output_dir <- file.path(cfg$output_dir, model_name)
+    model_path <- file.path(output_dir, 'model.rds')
+    output_path <- file.path(output_dir, paste0('output_', eval_partition, '.csv'))
+    eval_path <- file.path(output_dir, paste0('eval_', eval_partition, '.txt'))
+
+    # Load model
+    message('  Loading model')
+    m <- load.cdrgam(model_path)$m
+
     # Load data
     sep <- data_cfg$sep
     X_part <- paste0('X_', eval_partition)
@@ -256,6 +266,7 @@ evaluate_cdrgam <- function(
     predictor_names <- get_columns_from_cfg(model_cfg$formula)
     ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
     other_names <- get_others_from_cfg(model_cfg$formula)
+    ranef_levels <- lapply(m$var.summary[names(m$var.summary) %in% ranef_names], levels)
     cdrgam_data <- get_cdr_data(
         X,
         Y,
@@ -264,6 +275,7 @@ evaluate_cdrgam <- function(
         series_ids=data_cfg$series_ids,
         ranef_names=ranef_names,
         other_names=other_names,
+        ranef_levels=ranef_levels,
         filters=data_cfg$filters,
         history_length=data_cfg$history_length,
         future_length=data_cfg$future_length,
@@ -271,14 +283,6 @@ evaluate_cdrgam <- function(
     )
     n <- length(cdrgam_data[[response_name]])
 
-    output_dir <- file.path(cfg$output_dir, model_name)
-    model_path <- file.path(output_dir, 'model.rds')
-    output_path <- file.path(output_dir, paste0('output_', eval_partition, '.csv'))
-    eval_path <- file.path(output_dir, paste0('eval_', eval_partition, '.txt'))
-
-    message('  Loading model')
-    model <- load.cdrgam(model_path)
-    m <- model$m
     # Use model.matrix to handle responses containing transformations
     response_name <- model_cfg$response
     obs <- model.matrix(as.formula(paste('~', response_name)), data=cdrgam_data)[, response_name]
@@ -719,6 +723,8 @@ get_others_from_cfg <- function(
 #'   containing the difference in time between impulses and response.
 #' @param mask_col A string specifying the name of the column
 #'   containing the mask over valid timepoints.
+#' @param time_col A string specifying the name of the column containing the
+#'   time variable
 #' @return A string representing the RHS of the model formula
 #' @export
 get_formula_string <- function(
@@ -727,11 +733,13 @@ get_formula_string <- function(
         k_t=10,
         bs='cr',
         bs_t='cr',
+        s_fn='te',
         use_intercept=TRUE,
         use_rate=TRUE,
         ran_gf=NULL,
         others=NULL,
         stationary=TRUE,
+        id=NULL,
         t_delta_col='t_delta',
         mask_col='mask',
         time_col='time'
@@ -793,6 +801,7 @@ get_formula_string <- function(
             k_t,
             bs,
             bs_t,
+            id,
             inputs=NULL,
             ran_gf=NULL
     ) {
@@ -846,9 +855,15 @@ get_formula_string <- function(
         if (n_k_arg > 1) {
             k_arg <- paste0('c(', k_arg, ')')
         }
-        pred_f <- paste0(
-            'te(', preds, ', k=', k_arg, ', bs=', bs_arg, ', by=', by_in, ')'
-        )
+        if (is.null(id)) {
+            pred_f <- paste0(
+                s_fn, '(', preds, ', k=', k_arg, ', bs=', bs_arg, ', by=', by_in, ')'
+            )
+        } else {
+            pred_f <- paste0(
+                s_fn, '(', preds, ', k=', k_arg, ', bs=', bs_arg, ', by=', by_in, ', id="', id, '")'
+            )
+        }
         return(pred_f)
     }
 
@@ -857,7 +872,7 @@ get_formula_string <- function(
         if (is.null(ran_gf)) {
             f <- c(f, '1')
         } else {
-            f <- c(f, paste0('te(', ran_gf, ', bs="re", by=', mask_col, ')'))
+            f <- c(f, paste0(s_fn, '(', ran_gf, ', bs="re", by=', mask_col, ')'))
         }
     } else if (is.null(ran_gf)) {
         f <- c(f, '0')
@@ -891,7 +906,11 @@ get_formula_string <- function(
         if (n_bs > 1) {
             bs_ <- paste0('c(', bs_, ')')
         }
-        f <- c(f, paste0('te(', inputs_, ', k=', k_, ', bs=', bs_, ', by=', mask_col, ')'))
+        if (is.null(id)) {
+            f <- c(f, paste0(s_fn, '(', inputs_, ', k=', k_, ', bs=', bs_, ', by=', mask_col, ')'))
+        } else {
+            f <- c(f, paste0(s_fn, '(', inputs_, ', k=', k_, ', bs=', bs_, ', by=', mask_col, ', id="', id, '")'))
+        }
     }
     for (irf in irfs) {
         if (!is.null(names(irf)) && names(irf) == c('inputs', 'impulses')) {
@@ -901,7 +920,7 @@ get_formula_string <- function(
             impulses <- irf
             inputs <- NULL
         }
-        f <- c(f, get_irf_formula(impulses, k, k_t, bs, bs_t, inputs=inputs, ran_gf=ran_gf))
+        f <- c(f, get_irf_formula(impulses, k, k_t, bs, bs_t, id, inputs=inputs, ran_gf=ran_gf))
     }
     for (other in others) {
         f <- c(f, other)
