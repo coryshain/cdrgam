@@ -872,7 +872,7 @@ get_formula_string <- function(
         if (is.null(ran_gf)) {
             f <- c(f, '1')
         } else {
-            f <- c(f, paste0(s_fn, '(', ran_gf, ', bs="re", by=', mask_col, ')'))
+            f <- c(f, paste0(s_fn, '(', ran_gf, '_Y, bs="re")'))
         }
     } else if (is.null(ran_gf)) {
         f <- c(f, '0')
