@@ -10,11 +10,13 @@ get_formula_string(
   k_t = 10,
   bs = "cr",
   bs_t = "cr",
+  s_fn = "te",
   use_intercept = TRUE,
   use_rate = TRUE,
   ran_gf = NULL,
   others = NULL,
   stationary = TRUE,
+  id = NULL,
   t_delta_col = "t_delta",
   mask_col = "mask",
   time_col = "time"
@@ -77,6 +79,9 @@ containing the difference in time between impulses and response.}
 
 \item{mask_col}{A string specifying the name of the column
 containing the mask over valid timepoints.}
+
+\item{time_col}{A string specifying the name of the column containing the
+time variable}
 }
 \value{
 A string representing the RHS of the model formula
