@@ -132,6 +132,7 @@ fit_cdrgam <- function(
     yaml::write_yaml(cfg, file=config_path)
 
     # Load data
+    message('  Loading data')
     X <- data_cfg$X_train
     sep <- data_cfg$sep
     if (is.string(X)) {  # Provided as a filepath
@@ -144,6 +145,7 @@ fit_cdrgam <- function(
     response_name <- all.vars(as.formula(paste('~', model_cfg$response)))
     predictor_names <- get_columns_from_cfg(model_cfg$formula)
     ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
+    predictor_names <- predictor_names[!(predictor_names %in% ranef_names)]
     other_names <- get_others_from_cfg(model_cfg$formula)
     cdrgam_data <- get_cdr_data(
         X,
@@ -256,6 +258,7 @@ evaluate_cdrgam <- function(
     m <- load.cdrgam(model_path)$m
 
     # Load data
+    message('  Loading data')
     sep <- data_cfg$sep
     X_part <- paste0('X_', eval_partition)
     Y_part <- paste0('Y_', eval_partition)
@@ -604,6 +607,11 @@ get_columns_from_cfg <- function(
                     columns <- c(columns, new_columns)
                 }
             }
+            others <- formula_$others
+            if (is.null(others)) next
+            others <- all.vars(as.formula(paste('~', others)))
+            others <- others[!grepl('_Y$', others)]
+            columns <- c(columns, others)
         }
     }
     columns <- unique(columns)
@@ -732,7 +740,7 @@ get_formula_string <- function(
         k_t=10,
         bs='cr',
         bs_t='cr',
-        s_fn='te',
+        s_fn=NULL,
         use_intercept=TRUE,
         use_rate=TRUE,
         ran_gf=NULL,
@@ -794,10 +802,12 @@ get_formula_string <- function(
     bs_t <- expand_arg(x=bs_t, variables=irfs, argname='bs_t', type='character', add_t_delta=TRUE)
 
 
-    if (is.null(ran_gf)) {
-        s_fn <- 'te'
-    } else {
-        s_fn <- 'ti'
+    if (is.null(s_fn)) {
+        if (is.null(ran_gf)) {
+            s_fn <- 'te'
+        } else {
+            s_fn <- 'ti'
+        }
     }
 
     # Helper function to simplify per-predictor code
@@ -839,7 +849,7 @@ get_formula_string <- function(
         if (!(is.null(ran_gf))) {
             # Add random grouping factor
             for (ran_gf_ in ran_gf) {  # Allows nesting, for crossed random grouping factors
-                ranef_in <- c(ranef_in, ran_gf)
+                ranef_in <- c(ranef_in, ran_gf_)
                 bs_arg <- c(bs_arg, '"re"')
             }
         }
@@ -899,7 +909,7 @@ get_formula_string <- function(
         }
         if (!is.null(ran_gf)) {
             inputs_ <- c(inputs_, ran_gf)
-            bs_ <- c(bs_, '"re"')
+            bs_ <- c(bs_, rep('"re"', length(ran_gf)))
         }
         n_k <- length(k_)
         n_bs <- length(bs_)

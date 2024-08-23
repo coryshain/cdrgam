@@ -101,9 +101,6 @@ get_cdr_data <- function(
         verbose=TRUE
 ) {
     predictor_names <- predictor_names[!(predictor_names %in% c(time_col, mask_col))]
-    if (verbose) {
-        message('  Loading data')
-    }
     # Distinguish series groups
     if (is.null(series_ids)) {
         series_id <- '!!!SERIES_ID!!!'

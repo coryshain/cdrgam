@@ -414,7 +414,8 @@ get_irf_metadata <- function(
         add_rate=TRUE,
         exclude=c('t_delta', 'mask'),
         t_delta_col='t_delta',
-        mask_col='mask_col'
+        mask_col='mask_col',
+        plot_ran=FALSE
 ) {
     if (is.null(sds)) {
         sds <- list()
@@ -456,13 +457,14 @@ get_irf_metadata <- function(
             next
         }
         is.irf <- t_delta_col %in% smooth$term
-	has.factor <- sum(factors %in% smooth$term) > 0
+        factors_ <- factors[factors %in% smooth$term]
+	has.factor <- length(factors_) > 0
         term_names <- strsplit(smooth$by, split=' * ', fixed=TRUE)[[1]]
         sel <- !(term_names %in% exclude)
         if (sum(term_names %in% gf) > 0) { # Skip random effects
             next
         }
-        if (is.irf && !has.factor) {
+        if (is.irf && (plot_ran || !has.factor)) {
             if (mean(term_names %in% c(mask_col)) == 1) {
                 if (add_rate){
                     # Rate term
@@ -492,6 +494,9 @@ get_irf_metadata <- function(
                         irf_name <- irf_name_map[[irf_key]]
                         break
                     }
+                }
+                if (has.factor) {
+                    irf_name <- paste(irf_name, paste(factors_, collapse=', '), sep=' | ')
                 }
                 X_ref <- means
                 for (key in names(deltas)) {
