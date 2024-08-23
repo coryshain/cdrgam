@@ -1,15 +1,15 @@
 #' High-level CDR-GAM wrapper for fitting, evaluating, and plotting
 #'
-#' A convenience function for fitting, evaluating, and plotting a CDR-GAM model
+#' A convenience function for fitting, plotting, and evaluating a CDR-GAM model
 #' using a configuration file. The function will fit the model if `fit` is
 #' `TRUE`, evaluate the model if `eval_partition` is provided, and visualize
 #' the model if `plot` is `TRUE`.
 #'
 #' @param cfg A configuration object or a string with the path to a YAML file
 #' @param model_name A string with the name of the model to fit
+#' @param plot A logical, whether to visualize the model estimates
 #' @param fit A logical, whether to fit the model
 #' @param evaluate A logical, whether to evaluate the model
-#' @param plot A logical, whether to visualize the model estimates
 #' @param overwrite A logical, whether to refit and overwrite an existing
 #'    model file
 #' @param clean A logical value indicating whether to clean
@@ -24,10 +24,6 @@
 #'   native `mgcv` functionality like plotting or prediction
 #'   without supplying a dataset. Ignored if `clean=FALSE`. See
 #'   `clean_data_from_gam()` for details.
-#' @param eval_partition A string or a list of strings with the names of the
-#'    partition(s) (e.g., train, val, test) on which to evaluate
-#' @param extra_cols A logical, whether to include all columns from `Y` in
-#'   the output
 #' @param plot_cfg A configuration object or a string with the path to a YAML
 #'    file with additional plot configuration settings (useful for overriding
 #'    defaults used in the main config)
@@ -39,23 +35,27 @@
 #'   distinguished as needed by the `color` column. This can be used to
 #'   reload the data into other software environments in order to customize
 #'   the look and contents of plots.
+#' @param eval_partition A string or a list of strings with the names of the
+#'    partition(s) (e.g., train, val, test) on which to evaluate
+#' @param extra_cols A logical, whether to include all columns from `Y` in
+#'   the output
 #' @export
 main <- function(
         cfg,
         model_name,
         fit=TRUE,
-        evaluate=TRUE,
         plot=TRUE,
+        evaluate=TRUE,
         # `fit_cdrgam()` args:
         overwrite=FALSE,
         clean=TRUE,
         keep_model=FALSE,
-        # `evaluate_cdrgam()` args:
-        eval_partition=c('train', 'val'),
-        extra_cols=FALSE,
         # `plot_cdrgam()` args:
         plot_cfg=NULL,
-        dump_plot_data=FALSE
+        dump_plot_data=FALSE,
+        # `evaluate_cdrgam()` args:
+        eval_partition=c('train', 'val'),
+        extra_cols=FALSE
 ) {
     if (is.string(cfg)) {  # Provided as a filepath
         cfg <- get_cfg(cfg)
@@ -180,10 +180,9 @@ fit_cdrgam <- function(
         if (length(f) == 1) {
             f <- f[[1]]
         }
-        fit_kwargs <- list(f, data=cdrgam_data, drop.unused.levels=FALSE)
-        keys <- names(model_cfg)
-        keys <- keys[keys %in% names(GLOBAL.CDRGAM$model)]
-        fit_kwargs <- c(fit_kwargs, model_cfg[keys])
+        fit_kwargs <- c(list(f, data=cdrgam_data, drop.unused.levels=FALSE))
+        keys <- names(model_cfg$gam)
+        fit_kwargs[keys] <- model_cfg$gam[keys]
         m <- do.call(mgcv::gam, fit_kwargs)
         model <- list(
             m=m,

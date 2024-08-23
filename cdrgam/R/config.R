@@ -44,12 +44,18 @@ get_cfg <- function(path) {
     if ('model' %in% names(cfg)) {
         keys <- names(cfg$model)
         defaults$model[keys] <- cfg$model[keys]
+        keys <- names(GLOBAL.CDRGAM$model$gam)
+        keys <- keys[!(keys %in% names(defaults$model$gam))]
+        defaults$model$gam[keys] <- GLOBAL.CDRGAM$model$gam[keys]
     }
 
     for (model in names(cfg$models)) {
         keys <- names(defaults$model)
         keys <- keys[!(keys %in% names(cfg$models[[model]]))]
         cfg$models[[model]][keys] <- defaults$model[keys]
+        keys <- names(defaults$model$gam)
+        keys <- keys[!(keys %in% names(cfg$models[[model]]$gam))]
+        cfg$models[[model]]$gam[keys] <- defaults$model$gam[keys]
         formula_defaults <- defaults$formula
         keys <- names(cfg$models[[model]])
         keys <- keys[keys %in% names(formula_defaults)]

@@ -13,7 +13,9 @@ GLOBAL.CDRGAM <- list(
         bs=NULL
     ),
     model=list(
-        gamma=1,
+        gam=list(
+            gamma=1
+        ),
         family='gaussian'
     ),
     plot=list(

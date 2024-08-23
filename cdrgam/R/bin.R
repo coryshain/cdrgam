@@ -1,6 +1,6 @@
 #' Command-line utility for running CDR-GAM models
 #'
-#' A command-line utility for fitting, evaluating, and plotting CDR-GAM models.
+#' A command-line utility for fitting, plotting, and evaluating CDR-GAM models.
 #' Wraps the `main()` function for use in the command line as follows:
 #'     `Rscript -e "cdrgam::cli()" <cfg> <model_name> --<option1> <value1> --<option2> <value2> ...`
 #' where `<cfg>` is the path to a YAML configuration file, `<model_name>` is the
@@ -17,9 +17,9 @@ cli <- function() {
     )
     # Optional arguments to `main()`
     parser <- optparse::add_option(parser, '--fit', type='logical', default=TRUE, help='Whether to fit the model')
+    parser <- optparse::add_option(parser, '--plot', type='logical', default=TRUE, help='Whether to plot the model')
     parser <- optparse::add_option(parser, '--evaluate', type='logical', default=TRUE,
                                    help='Whether to evaluate the model')
-    parser <- optparse::add_option(parser, '--plot', type='logical', default=TRUE, help='Whether to plot the model')
     parser <- optparse::add_option(parser, '--overwrite', type='logical',
                                    help='Whether to overwrite an existing model', action='store_true')
     parser <- optparse::add_option(parser, '--clean', type='logical', help='Whether to clean data from fitted model')
@@ -82,9 +82,9 @@ make_jobs <- function() {
     parser <- optparse::add_option(parser, c('-P', '--partition'), help='SLURM partition to use')
     # Optional arguments to `main()`
     parser <- optparse::add_option(parser, '--fit', type='logical', default=TRUE, help='Whether to fit the model')
+    parser <- optparse::add_option(parser, '--plot', type='logical', default=TRUE, help='Whether to plot the model')
     parser <- optparse::add_option(parser, '--evaluate', type='logical', default=TRUE,
                                    help='Whether to evaluate the model')
-    parser <- optparse::add_option(parser, '--plot', type='logical', default=TRUE, help='Whether to plot the model')
     parser <- optparse::add_option(parser, '--overwrite', type='logical',
                                    help='Whether to overwrite an existing model', action='store_true')
     parser <- optparse::add_option(parser, '--clean', type='logical', help='Whether to clean data from fitted model')
@@ -106,11 +106,11 @@ make_jobs <- function() {
     if (options$fit) {
         job_name <- c(job_name, 'fit')
     }
-    if (options$evaluate) {
-        job_name <- c(job_name, 'evaluate')
-    }
     if (options$plot) {
         job_name <- c(job_name, 'plot')
+    }
+    if (options$evaluate) {
+        job_name <- c(job_name, 'evaluate')
     }
     job_name <- paste(job_name, collapse='-')
 
