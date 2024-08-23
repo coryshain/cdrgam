@@ -235,7 +235,7 @@ get_cdr_data <- function(
     }
 
     Y_aligned <- other_names
-    Y_aligned <- c(Y_aligned, ranef_names[!ranef_names %in% other_names])
+    Y_aligned <- c(Y_aligned, paste0(ranef_names[!(ranef_names %in% other_names)], '_Y'))
     for (other_name in Y_aligned) {
         if (other_name %in% names(out)) {  # Already processed, skip
             next
