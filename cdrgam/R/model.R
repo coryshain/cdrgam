@@ -64,6 +64,9 @@ main <- function(
     if (fit) {
         fit_cdrgam(cfg, model_name=model_name, overwrite=overwrite, clean=clean, keep_model=keep_model)
     }
+    if (plot) {
+        plot_cdrgam(cfg, model_name=model_name, plot_cfg=plot_cfg, dump_plot_data=dump_plot_data)
+    }
     if (evaluate) {
         for (eval_partition_ in eval_partition) {
             X_part <- paste0('X_', eval_partition_)
@@ -74,9 +77,6 @@ main <- function(
                 message(paste0('No data provided for partition "', eval_partition_, '". Skipping evaluation.'))
             }
         }
-    }
-    if (plot) {
-        plot_cdrgam(cfg, model_name=model_name, plot_cfg=plot_cfg, dump_plot_data=dump_plot_data)
     }
 }
 
@@ -793,6 +793,13 @@ get_formula_string <- function(
     k_t <- expand_arg(x=k_t, variables=irfs, argname='k_t', type='numeric', add_t_delta=TRUE)
     bs <- expand_arg(x=bs, variables=irfs, argname='bs', type='character')
     bs_t <- expand_arg(x=bs_t, variables=irfs, argname='bs_t', type='character', add_t_delta=TRUE)
+
+
+    if (is.null(ran_gf)) {
+        s_fn <- 'te'
+    } else {
+        s_fn <- 'ti'
+    }
 
     # Helper function to simplify per-predictor code
     get_irf_formula <- function(
