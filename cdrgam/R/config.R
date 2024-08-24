@@ -89,3 +89,19 @@ get_plot_cfg <- function(path) {
     cfg[keys] <- defaults$plot[keys]
     return(cfg)
 }
+
+diff_cfg <- function(cfg1, cfg2) {
+    cfg1_only <- names(cfg1)[!(names(cfg1) %in% names(cfg2))]
+    diff1 <- cfg1[cfg1_only]
+    cfg2_only <- names(cfg2)[!(names(cfg2) %in% names(cfg1))]
+    diff2 <- cfg1[cfg2_only]
+    shared <- names(cfg1)[names(cfg1) %in% names(cfg2)]
+    neq <- !mapply(function(x, y) isTRUE(all.equal(x, y)), cfg1[shared], cfg2[shared])
+    for (key in shared[neq]) {
+        ret <- diff_cfg(cfg1[[key]], cfg2[[key]])
+        diff1[[key]] <- ret$diff1
+        diff2[[key]] <- ret$diff2
+    }
+
+    return(list(diff1=diff1, diff2=diff2))
+}

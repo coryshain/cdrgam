@@ -8,15 +8,15 @@ main(
   cfg,
   model_name,
   fit = TRUE,
-  evaluate = TRUE,
   plot = TRUE,
+  evaluate = TRUE,
   overwrite = FALSE,
   clean = TRUE,
   keep_model = FALSE,
-  eval_partition = c("train", "val"),
-  extra_cols = FALSE,
   plot_cfg = NULL,
-  dump_plot_data = FALSE
+  dump_plot_data = FALSE,
+  eval_partition = c("train", "val"),
+  extra_cols = FALSE
 )
 }
 \arguments{
@@ -26,9 +26,9 @@ main(
 
 \item{fit}{A logical, whether to fit the model}
 
-\item{evaluate}{A logical, whether to evaluate the model}
-
 \item{plot}{A logical, whether to visualize the model estimates}
+
+\item{evaluate}{A logical, whether to evaluate the model}
 
 \item{overwrite}{A logical, whether to refit and overwrite an existing
 model file}
@@ -47,12 +47,6 @@ native \code{mgcv} functionality like plotting or prediction
 without supplying a dataset. Ignored if \code{clean=FALSE}. See
 \code{clean_data_from_gam()} for details.}
 
-\item{eval_partition}{A string or a list of strings with the names of the
-partition(s) (e.g., train, val, test) on which to evaluate}
-
-\item{extra_cols}{A logical, whether to include all columns from \code{Y} in
-the output}
-
 \item{plot_cfg}{A configuration object or a string with the path to a YAML
 file with additional plot configuration settings (useful for overriding
 defaults used in the main config)}
@@ -65,9 +59,15 @@ y-axis, and any other relevant information, with different subplots
 distinguished as needed by the \code{color} column. This can be used to
 reload the data into other software environments in order to customize
 the look and contents of plots.}
+
+\item{eval_partition}{A string or a list of strings with the names of the
+partition(s) (e.g., train, val, test) on which to evaluate}
+
+\item{extra_cols}{A logical, whether to include all columns from \code{Y} in
+the output}
 }
 \description{
-A convenience function for fitting, evaluating, and plotting a CDR-GAM model
+A convenience function for fitting, plotting, and evaluating a CDR-GAM model
 using a configuration file. The function will fit the model if \code{fit} is
 \code{TRUE}, evaluate the model if \code{eval_partition} is provided, and visualize
 the model if \code{plot} is \code{TRUE}.

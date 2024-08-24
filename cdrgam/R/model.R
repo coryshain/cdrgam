@@ -238,7 +238,7 @@ fit_cdrgam <- function(
         )
     } else {
         message('  Model already exists, skipping fitting and reloading')
-        model <- load.cdrgam(model_path)
+        model <- load_cdrgam(model_path)
         m <- model$m
         model <- list(
             m=m,
@@ -251,7 +251,7 @@ fit_cdrgam <- function(
         )
     }
     message('  Saving')
-    save.cdrgam(model, file=model_path, clean=clean, keep_model=keep_model)
+    save_cdrgam(model, file=model_path, clean=clean, keep_model=keep_model)
 
     summary_ <- summary(m)
     print(summary_)
@@ -296,7 +296,7 @@ evaluate_cdrgam <- function(
 
     # Load model
     message('  Loading model')
-    m <- load.cdrgam(model_path)$m
+    m <- load_cdrgam(model_path)$m
 
     # Load data
     message('  Loading data')
@@ -411,7 +411,7 @@ plot_cdrgam <- function(
 
     output_dir <- file.path(cfg$output_dir, model_name)
     message('  Loading model')
-    model <- load.cdrgam(file.path(output_dir, 'model.rds'))
+    model <- load_cdrgam(file.path(output_dir, 'model.rds'))
     m <- model$m
     means <- model$means
     sds <- model$sds
@@ -752,6 +752,9 @@ get_others_from_cfg <- function(
 #' @param bs_t A character or list of characters, the basis function for the
 #'   IRF splines for the time delta variable of each IRF. If a single character,
 #'   the same value is used for all IRFs. See `?mgcv::smooth.terms` for details.
+#' @param s_fn A string with the name of the `mgcv` smooth function to use (e.g.,
+#'  `te`, `ti`, etc.). If NULL, the function will default to `te` if `ran_gf`
+#'   is NULL, and `ti` otherwise.
 #' @param use_intercept A logical, whether to include an intercept term
 #' @param use_rate A logical, whether to a rate (deconvolutional
 #'   intercept) term
@@ -767,6 +770,9 @@ get_others_from_cfg <- function(
 #'   add a term that fits a non-convolutional smooth to a predictor called `time`,
 #'   the term should use `time_Y`, e.g.:
 #'       `te(time_Y, k=10, bs='cr')`
+#' @param stationary A logical, whether to parameterize IRFs with a time variable
+#' @param id A string with the name of the ID variable to supply to smooth calls
+#'   in the model formula
 #' @param t_delta_col A string specifying the name of the column
 #'   containing the difference in time between impulses and response.
 #' @param mask_col A string specifying the name of the column

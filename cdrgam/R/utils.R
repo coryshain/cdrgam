@@ -50,7 +50,7 @@ is.string <- function(x){
 #'   `clean_data_from_gam()` for details.
 #' @param ... Additional arguments to `saveRDS()`
 #' @export
-save.cdrgam <- function(obj, file, clean=TRUE, keep_model=FALSE, ...) {
+save_cdrgam <- function(obj, file, clean=TRUE, keep_model=FALSE, ...) {
     if (clean) {
         obj$m <- clean_data_from_gam(obj$m, keep_model=keep_model)
     }
@@ -64,7 +64,7 @@ save.cdrgam <- function(obj, file, clean=TRUE, keep_model=FALSE, ...) {
 #'   and additional metadata stored in other fields.
 #' @param ... Additional arguments to `readRDS()`
 #' @export
-load.cdrgam <- function(file, ...) {
+load_cdrgam <- function(file, ...) {
     obj <- readRDS(file, ...)
     return(obj)
 }

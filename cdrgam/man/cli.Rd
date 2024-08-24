@@ -7,7 +7,7 @@
 cli()
 }
 \description{
-A command-line utility for fitting, evaluating, and plotting CDR-GAM models.
+A command-line utility for fitting, plotting, and evaluating CDR-GAM models.
 Wraps the \code{main()} function for use in the command line as follows:
 \verb{Rscript -e "cdrgam::cli()" <cfg> <model_name> --<option1> <value1> --<option2> <value2> ...}
 where \verb{<cfg>} is the path to a YAML configuration file, \verb{<model_name>} is the

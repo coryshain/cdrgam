@@ -181,3 +181,31 @@ test <- function() {
     }
     do.call(test_cdrgam, args)
 }
+
+#' Command-line utility for comparing configs of saved CDR-GAM models
+#'
+#' This utility compares the configuration files for two
+#' saved CDR-GAM models (fitted via `fit_cdrgam()` and saved via
+#' `save_cdrgam()`).
+#' @export
+diff_cfgs <- function() {
+    parser <- optparse::OptionParser(
+        description=paste(
+            "Command-line utility for comparing configs of saved CDR-GAM models.",
+            "Two positional arguments are required: <model_path1> and <model_path2>."
+        )
+    )
+    cliargs <- optparse::parse_args(parser, positional_arguments=2)
+    model_path1 <- cliargs$args[[1]]
+    model_path2 <- cliargs$args[[2 ]]
+    cfg1 <- readRDS(model_path1)$cfg
+    cfg2 <- readRDS(model_path2)$cfg
+
+    cfg1_path <- tempfile()
+    cfg2_path <- tempfile()
+
+    yaml::write_yaml(cfg1, cfg1_path)
+    yaml::write_yaml(cfg2, cfg2_path)
+    out <- capture.output(system(sprintf('diff %s %s', cfg1_path, cfg2_path)))
+    cat(paste(out, '\n'), stdout())
+}

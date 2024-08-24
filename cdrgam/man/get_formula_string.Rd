@@ -10,7 +10,7 @@ get_formula_string(
   k_t = 10,
   bs = "cr",
   bs_t = "cr",
-  s_fn = "te",
+  s_fn = NULL,
   use_intercept = TRUE,
   use_rate = TRUE,
   ran_gf = NULL,
@@ -55,6 +55,10 @@ the IRF will be constrained to be linear in the predictor.}
 IRF splines for the time delta variable of each IRF. If a single character,
 the same value is used for all IRFs. See \code{?mgcv::smooth.terms} for details.}
 
+\item{s_fn}{A string with the name of the \code{mgcv} smooth function to use (e.g.,
+\code{te}, \code{ti}, etc.). If NULL, the function will default to \code{te} if \code{ran_gf}
+is NULL, and \code{ti} otherwise.}
+
 \item{use_intercept}{A logical, whether to include an intercept term}
 
 \item{use_rate}{A logical, whether to a rate (deconvolutional
@@ -73,6 +77,11 @@ as matrices), the column must be suffixed with '_Y' in the term. Thus, to
 add a term that fits a non-convolutional smooth to a predictor called \code{time},
 the term should use \code{time_Y}, e.g.:
 \code{te(time_Y, k=10, bs='cr')}}
+
+\item{stationary}{A logical, whether to parameterize IRFs with a time variable}
+
+\item{id}{A string with the name of the ID variable to supply to smooth calls
+in the model formula}
 
 \item{t_delta_col}{A string specifying the name of the column
 containing the difference in time between impulses and response.}

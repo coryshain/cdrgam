@@ -14,7 +14,8 @@ get_irf_metadata(
   add_rate = TRUE,
   exclude = c("t_delta", "mask"),
   t_delta_col = "t_delta",
-  mask_col = "mask_col"
+  mask_col = "mask_col",
+  plot_ran = FALSE
 )
 }
 \arguments{
