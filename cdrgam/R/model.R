@@ -185,6 +185,47 @@ fit_cdrgam <- function(
         fit_kwargs <- c(list(f, data=cdrgam_data, drop.unused.levels=FALSE))
         keys <- names(model_cfg$gam)
         fit_kwargs[keys] <- model_cfg$gam[keys]
+
+        # Compute knots
+        if (is.null(fit_kwargs$knots)) {
+            if (!is.null(model_cfg$knots)) {
+                if (model_cfg$knots == 'log') {
+                    val_keys <- c('k_t', 'bs_t')
+                    vals <- list()
+                    for (formula in model_cfg$formula) {
+                        for (formula_ in formula) {
+                            keys <- names(formula_)
+                            keys <- keys[keys %in% val_keys]
+                            vals[keys] <- formula_[keys]
+                        }
+                    }
+                    def_keys <- names(GLOBAL.CDRGAM$formula)
+                    def_keys <- def_keys[!(def_keys %in% val_keys)]
+                    val_keys[def_keys] <- GLOBAL.CDRGAM$formula[def_keys]
+
+                    if (!is.numeric(vals$k_t)) {
+                        vals$k_t <- vals$k_t$t_delta
+                    }
+                    if (!is.character(vals$bs_t)) {
+                        vals$bs_t <- vals$bs_t$t_delta
+                    }
+                    if (vals$bs_t == 'tp') {
+                        n <- vals$k_t - 2
+                    } else {
+                        n <- vals$k_t
+                    }
+
+                    lq <- min(quantiles$t_delta)
+                    uq <- max(quantiles$t_delta)
+                    knots <- (exp(1) - rev(log(seq(exp(0), exp(exp(1)), length=n)))) / exp(1)
+                    knots <- knots * (uq - lq) + lq
+                } else {
+                    knots <- model_cfg$knots
+                }
+                fit_kwargs$knots <- list(t_delta=knots)
+            }
+        }
+
         m <- do.call(mgcv::gam, fit_kwargs)
         model <- list(
             m=m,
@@ -751,15 +792,10 @@ get_formula_string <- function(
         mask_col='mask',
         time_col='time'
 ) {
-    defaults <- list(
-        k=5,
-        k_t=10,
-        bs='cr',
-        bs_t='cr',
-        random_intercept=TRUE,
-        random_rate=TRUE,
-        random_irf=TRUE
-    )
+    defaults <- GLOBAL.CDRGAM
+    defaults$random_intercept <- TRUE
+    defaults$random_rate <- TRUE
+    defaults$random_irf <- TRUE
 
     # Expand function arguments as needed into lists with full coverage of relevant input values
     expand_arg <- function(x, variables, argname, type='numeric', add_t_delta=FALSE) {
