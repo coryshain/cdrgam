@@ -185,7 +185,9 @@ fit_cdrgam <- function(
         fit_kwargs <- c(list(f, data=cdrgam_data, drop.unused.levels=FALSE))
         keys <- names(model_cfg$gam)
         fit_kwargs[keys] <- model_cfg$gam[keys]
-
+        if ('family' %in% names(model_cfg)) {
+            fit_kwargs$family <- model_cfg$family
+        }
         # Compute knots
         if (is.null(fit_kwargs$knots)) {
             if (!is.null(model_cfg$knots)) {
