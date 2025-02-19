@@ -65,7 +65,7 @@ make_jobs <- function() {
         '#SBATCH --ntasks=%d',
         sep='\n'
     )
-    slurm_names <- c('time', 'mem', 'ntasks', 'exclude', 'partition')
+    slurm_names <- c('time', 'mem', 'ntasks', 'exclude', 'account', 'partition')
 
     parser <- optparse::OptionParser(
         description=paste(
@@ -79,6 +79,7 @@ make_jobs <- function() {
     parser <- optparse::add_option(parser, c('-m', '--mem'), default=8, help='Memory allocation (in GB)')
     parser <- optparse::add_option(parser, c('-n', '--ntasks'), default=2, help='Number of cores ("tasks")')
     parser <- optparse::add_option(parser, c('-e', '--exclude'), help='Comma-delimited list of nodes to exclude')
+    parser <- optparse::add_option(parser, c('-a', '--account'), help='SLURM account to use')
     parser <- optparse::add_option(parser, c('-P', '--partition'), help='SLURM partition to use')
     # Optional arguments to `main()`
     parser <- optparse::add_option(parser, '--fit', type='logical', default=TRUE, help='Whether to fit the model')
@@ -124,6 +125,9 @@ make_jobs <- function() {
             script <- sprintf(base, job_name_, job_name_, options$time, options$mem, options$ntasks)
             if (!is.null(options$exclude)) {
                 script <- paste(script, sprintf('#SBATCH --exclude=%s', options$exclude), sep='\n')
+            }
+            if (!is.null(options$account)) {
+                script <- paste(script, sprintf('#SBATCH --account=%s', options$account), sep='\n')
             }
             if (!is.null(options$partition)) {
                 script <- paste(script, sprintf('#SBATCH --partition=%s', options$partition), sep='\n')
