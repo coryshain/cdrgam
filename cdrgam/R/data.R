@@ -251,6 +251,56 @@ get_cdr_data <- function(
     return(out)
 }
 
+get_cdr_data_from_cfg <- function(cfg, model_name) {
+    # Get cfg
+    if (is.string(cfg)) {  # Provided as a filepath
+        cfg <- get_cfg(cfg)
+    }
+    validate_cfg(cfg, model_name)
+    data_cfg <- cfg$data
+    model_cfg <- cfg$models[[model_name]]
+
+    # Load data
+    message('  Loading data')
+    X <- data_cfg$X_train
+    sep <- data_cfg$sep
+    if (is.string(X)) {  # Provided as a filepath
+        X <- read.csv(X, sep=sep, header=TRUE)
+    }
+    Y <- data_cfg$Y_train
+    if (is.string(Y)) {  # Provided as a filepath
+        Y <- read.csv(Y, sep=sep, header=TRUE)
+    }
+    response_name <- all.vars(as.formula(paste('~', model_cfg$response)))
+    predictor_names <- get_columns_from_cfg(model_cfg$formula)
+    ranef_names <- get_ranefs_from_cfg(model_cfg$formula)
+    predictor_names <- predictor_names[!(predictor_names %in% ranef_names)]
+    other_names <- get_others_from_cfg(model_cfg$formula)
+    cdrgam_data <- get_cdr_data(
+        X,
+        Y,
+        response_name=response_name,
+        predictor_names=predictor_names,
+        series_ids=data_cfg$series_ids,
+        ranef_names=ranef_names,
+        other_names=other_names,
+        filters=data_cfg$filters,
+        history_length=data_cfg$history_length,
+        future_length=data_cfg$future_length,
+        t_delta_cutoff=data_cfg$t_delta_cutoff
+    )
+    means <- get_cdr_means(cdrgam_data)
+    sds <- get_cdr_sds(cdrgam_data)
+    quantiles <- get_cdr_quantiles(cdrgam_data)
+
+    return(list(
+        cdrgam_data=cdrgam_data,
+        means=means,
+        sds=sds,
+        quantiles=quantiles
+    ))
+}
+
 #' Apply filters to a response matrix
 #'
 #' Apply a list of filters to a response matrix `Y`. Each filter is a list
