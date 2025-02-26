@@ -396,6 +396,10 @@ plot_lines <- function(
 #'   containing the difference in time between impulses and response.
 #' @param mask_col A string specifying the name of the column
 #'   containing the mask over valid timepoints.
+#' @param plot_interactions A boolean specifying whether to include interactions
+#'   in plots (if FALSE, plot main effects only)
+#' @param plot_ran A boolean specifying whether to plot random effects
+#'   (if FALSE, plot fixed effects only)
 #' @return A list of IRF metadata, each containing the following elements:
 #'   - irf_name: The name of the IRF
 #'   - term_name: The name of the term (predictor) in the model
@@ -415,6 +419,7 @@ get_irf_metadata <- function(
         exclude=c('t_delta', 'mask'),
         t_delta_col='t_delta',
         mask_col='mask_col',
+        plot_interactions=FALSE,
         plot_ran=FALSE
 ) {
     if (is.null(sds)) {
@@ -479,6 +484,9 @@ get_irf_metadata <- function(
                 }
             } else {
                 term_names <- term_names[sel]
+	        if (length(term_names) > 1 & !plot_interactions) {
+		    next
+		}
                 deltas <- list()
                 for (term_name in term_names) {
                     if (term_name %in% names(sds)) {
@@ -488,13 +496,17 @@ get_irf_metadata <- function(
                     }
                 }
                 term_name <- paste(term_names, collapse=':')
+		irf_name = list()
                 irf_name <- paste0(term_name, ' | ', smooth_name)
+		irf_subnames = list()
                 for (irf_key in irf_keys) {
                     if (grepl(irf_key, irf_name, fixed=TRUE)) {
-                        irf_name <- irf_name_map[[irf_key]]
-                        break
+                        irf_subnames <- c(irf_subnames, irf_name_map[[irf_key]])
                     }
                 }
+		if (length(irf_subnames) > 0) {
+		    irf_name <- paste(irf_subnames, collapse=' by ')
+		}
                 if (has.factor) {
                     irf_name <- paste(irf_name, paste(factors_, collapse=', '), sep=' | ')
                 }

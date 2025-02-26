@@ -76,7 +76,7 @@ make_jobs <- function() {
     )
     # SLURM options
     parser <- optparse::add_option(parser, c('-t', '--time'), default=24, help='Max runtime (in hours)')
-    parser <- optparse::add_option(parser, c('-m', '--mem'), default=8, help='Memory allocation (in GB)')
+    parser <- optparse::add_option(parser, c('-m', '--mem'), default=32, help='Memory allocation (in GB)')
     parser <- optparse::add_option(parser, c('-n', '--ntasks'), default=2, help='Number of cores ("tasks")')
     parser <- optparse::add_option(parser, c('-e', '--exclude'), help='Comma-delimited list of nodes to exclude')
     parser <- optparse::add_option(parser, c('-a', '--account'), help='SLURM account to use')
