@@ -228,7 +228,19 @@ fit_cdrgam <- function(
             }
         }
 
-        m <- do.call(mgcv::gam, fit_kwargs)
+        tryCatch(
+            expr={
+                m <- do.call(mgcv::bam, fit_kwargs)
+            },
+            error=function(e) {
+                if (grepl('general families not supported by bam', e, fixed=TRUE)) {
+                    m <- do.call(mgcv::gam, fit_kwargs)
+                } else {
+                    stop(e)
+                }
+            }
+        )
+
         model <- list(
             m=m,
             means=means,
