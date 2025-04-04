@@ -397,9 +397,9 @@ plot_lines <- function(
 #' @param mask_col A string specifying the name of the column
 #'   containing the mask over valid timepoints.
 #' @param plot_interactions A boolean specifying whether to include interactions
-#'   in plots (if FALSE, plot main effects only)
+#'   in plots (if FALSE, plot main effects only).
 #' @param plot_ran A boolean specifying whether to plot random effects
-#'   (if FALSE, plot fixed effects only)
+#'   (if FALSE, plot fixed effects only).
 #' @return A list of IRF metadata, each containing the following elements:
 #'   - irf_name: The name of the IRF
 #'   - term_name: The name of the term (predictor) in the model

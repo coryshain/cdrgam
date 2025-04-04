@@ -108,9 +108,9 @@ get_cdr_data <- function(
         Y[[series_id]] <- as.factor(1)
     } else {
         series_id <- paste(series_ids, collapse='_')
-        X[[series_id]] <- as.factor(apply(X[, series_ids], 1, paste, collapse='_'))
+        X[[series_id]] <- as.factor(apply(X[, series_ids, drop=FALSE], 1, paste, collapse='_'))
         Y[[series_id]] <- factor(
-            apply(Y[, series_ids], 1, paste, collapse='_'),
+            apply(Y[, series_ids, drop=FALSE], 1, paste, collapse='_'),
             levels=levels(X[[series_id]])
         )
     }
@@ -409,8 +409,8 @@ get_time_windows <- function(
         X_ix_sort <- do.call(order, X_time)
         Y_ix_sort <- do.call(order, Y_time)
     } else {
-        X_ix_sort <- do.call(order, cbind(data.frame(X[,series_ids]), X_time))
-        Y_ix_sort <- do.call(order, cbind(data.frame(Y[,series_ids]), Y_time))
+        X_ix_sort <- do.call(order, cbind(data.frame(X[,series_ids, drop=FALSE]), X_time))
+        Y_ix_sort <- do.call(order, cbind(data.frame(Y[,series_ids, drop=FALSE]), Y_time))
     }
     X_ix_sort_to_orig <- c((1:m)[X_ix_sort], m + 1)  # Add extra count for endpoint
     Y_ix_sort_to_orig <- c((1:n)[Y_ix_sort], n + 1)  # Add extra count for endpoint
