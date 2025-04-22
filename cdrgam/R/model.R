@@ -182,7 +182,11 @@ fit_cdrgam <- function(
         if (length(f) == 1) {
             f <- f[[1]]
         }
-        fit_kwargs <- c(list(f, data=cdrgam_data, drop.unused.levels=FALSE))
+        fit_kwargs <- c(list(
+          f,
+          data=cdrgam_data,
+          drop.unused.levels=FALSE
+        ))
         keys <- names(model_cfg$gam)
         fit_kwargs[keys] <- model_cfg$gam[keys]
         if ('family' %in% names(model_cfg)) {
@@ -230,7 +234,18 @@ fit_cdrgam <- function(
 
         tryCatch(
             expr={
-                m <- do.call(mgcv::bam, fit_kwargs)
+                ncores <- parallel::detectCores()
+                cl <- parallel::makeCluster(ncores)
+                fit_kwargs_ <- c(
+                    fit_kwargs,
+                    list(
+                        method='fREML',
+                        discrete=TRUE,
+                        select=TRUE,
+                        cluster=cl
+                    )
+                )
+                m <- do.call(mgcv::bam, fit_kwargs_)
             },
             error=function(e) {
                 if (grepl('general families not supported by bam', e, fixed=TRUE)) {
