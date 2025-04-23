@@ -234,7 +234,7 @@ fit_cdrgam <- function(
 
         tryCatch(
             expr={
-                ncores <- parallel::detectCores()
+                ncores <- parallel::detectCores() - 1
                 cl <- parallel::makeCluster(ncores)
                 fit_kwargs_ <- c(
                     fit_kwargs,
